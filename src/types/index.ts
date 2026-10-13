@@ -166,6 +166,7 @@ export interface Order {
   id: string;
   orderNumber: string;
   organizationId: string;
+  organizationName?: string;
   pharmacyName?: string;
   branchId: string;
   branchName?: string;
@@ -182,6 +183,7 @@ export interface Order {
   deliveryFee: number;
   total: number;
   deliveryAddress?: string;
+  shippingAddress?: string;
   prescriptionId?: string;
   prescriptionStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
@@ -193,6 +195,7 @@ export interface Prescription {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  doctorName?: string;
   orderId?: string;
   fileUrl: string;
   fileName: string;
@@ -201,6 +204,7 @@ export interface Prescription {
   notes?: string;
   reviewedBy?: string;
   reviewedAt?: string;
+  uploadedAt?: string;
   createdAt: string;
 }
 
@@ -243,3 +247,34 @@ export interface Staff {
   status: 'ACTIVE' | 'INACTIVE';
   joinedAt: string;
 }
+
+export interface PurchaseOrder {
+  id: string;
+  purchaseNumber: string;
+  supplierName: string;
+  organizationId: string;
+  branchId: string;
+  branchName: string;
+  itemsCount: number;
+  itemsSummary: string;
+  total: number;
+  status: 'PENDING' | 'RECEIVED' | 'CANCELLED';
+  purchaseDate: string;
+}
+
+export interface DeliveryAssignment {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  deliveryStaffName: string;
+  deliveryStaffPhone: string;
+  branchId: string;
+  branchName: string;
+  status: 'ASSIGNED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'FAILED';
+  assignedTime: string;
+  completedTime?: string;
+}
+

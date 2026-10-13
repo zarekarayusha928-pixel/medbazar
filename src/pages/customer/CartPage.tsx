@@ -1,159 +1,305 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Trash2, ArrowRight, ShieldCheck, MapPin, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import {
+  ShoppingBag,
+  Trash2,
+  ArrowRight,
+  ShieldAlert,
+  MapPin,
+  Tag,
+  CheckCircle2,
+  Plus,
+  Minus,
+  ArrowLeft
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
-import { MOCK_MEDICINES } from '@/services/api/mockData';
+import { useCart } from '@/context/CartContext';
+import { useToast } from '@/components/ui/Toast';
 
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
-  const [items, setItems] = useState([
-    { medicine: MOCK_MEDICINES[0], quantity: 2, price: 32.50 },
-    { medicine: MOCK_MEDICINES[1], quantity: 1, price: 210.00 },
-  ]);
+  const { items, updateQuantity, removeFromCart, selectedBranch, subtotal, discount, deliveryFee, total, hasRxItems } = useCart();
+  const { showToast } = useToast();
 
-  const updateQty = (index: number, newQty: number) => {
-    if (newQty < 1) return;
-    const next = [...items];
-    next[index].quantity = newQty;
-    setItems(next);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+
+  const handleApplyCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    const code = couponCode.trim().toUpperCase();
+    if (code === 'MEDBAZAR10' || code === 'SAVE25' || code === 'FIRSTCARE') {
+      const disc = 25.00;
+      setAppliedCoupon(code);
+      setCouponDiscount(disc);
+      showToast('Coupon Applied', `Code ${code} applied successfully! Saved ₹${disc.toFixed(2)}`, 'success');
+    } else {
+      showToast('Invalid Coupon', 'Code not recognized. Try MEDBAZAR10', 'error');
+    }
   };
 
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = subtotal > 0 ? 40 : 0;
-  const discount = 15.00;
-  const total = Math.max(0, subtotal + deliveryFee - discount);
-  const rxRequired = items.some(i => i.medicine.prescriptionRequired);
+  const finalDiscount = discount + couponDiscount;
+  const grandTotal = Math.max(0, subtotal + deliveryFee - finalDiscount);
 
   return (
-    <div className="space-y-6">
-      <Breadcrumbs items={[{ label: 'Customer', href: '/customer' }, { label: 'Shopping Cart' }]} />
+    <div className="space-y-8">
+      <Breadcrumbs items={[{ label: 'Home', href: '/customer' }, { label: 'Shopping Cart' }]} />
 
-      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+      {/* Header */}
+      <div className="border-b border-sand-300 pb-5 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Your Shopping Cart</h1>
-          <p className="text-xs text-gray-500 mt-1">Branch: Apothecary Main Branch - Pune Station</p>
+          <span className="font-mono text-xs uppercase tracking-wider text-pine-800">Order Pre-Checkout</span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">Review Your Shopping Cart</h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Fulfilling branch: <span className="font-semibold text-gray-800">{selectedBranch.name}</span>
+          </p>
         </div>
-        <Badge variant="brand" size="md">{items.length} Items</Badge>
+
+        <div className="flex items-center gap-2">
+          <Badge variant="brand" size="md">
+            {items.length} {items.length === 1 ? 'Product' : 'Products'}
+          </Badge>
+        </div>
       </div>
 
       {items.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-gray-200 space-y-4">
-          <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto" />
-          <h3 className="text-lg font-bold text-gray-900">Your cart is empty</h3>
-          <p className="text-xs text-gray-500">Explore our catalogue to add medicines</p>
-          <Link to="/customer/medicines">
-            <Button size="sm">Browse Catalogue</Button>
-          </Link>
+        <div className="text-center py-20 bg-white rounded-3xl border border-sand-300 space-y-4 max-w-xl mx-auto p-8 shadow-2xs">
+          <div className="w-16 h-16 rounded-2xl bg-sand-100 text-gray-400 flex items-center justify-center mx-auto">
+            <ShoppingBag className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">Your shopping cart is empty</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+            Browse our verified pharmacy inventory to add prescribed medicines or daily healthcare supplies.
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/customer/medicines"
+              className="inline-flex items-center gap-2 bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-3 rounded-xl transition-colors shadow-2xs"
+            >
+              <span>Explore Medicine Catalogue</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Cart List */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Cart Items List */}
           <div className="lg:col-span-2 space-y-4">
-            <Card>
-              <CardBody className="p-0 divide-y divide-gray-100">
-                {items.map((item, index) => (
-                  <div key={item.medicine.id} className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={item.medicine.prescriptionRequired ? 'warning' : 'success'} size="sm">
-                          {item.medicine.prescriptionRequired ? 'Rx Required' : 'OTC'}
-                        </Badge>
-                        <span className="text-[10px] text-gray-400 font-semibold uppercase">{item.medicine.dosageForm}</span>
-                      </div>
-                      <h3 className="font-bold text-gray-900 text-sm">{item.medicine.name}</h3>
-                      <p className="text-xs text-gray-500">{item.medicine.brand} • ₹{item.price.toFixed(2)} per unit</p>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full sm:w-auto gap-6">
-                      <div className="flex items-center border border-gray-300 rounded-lg bg-white">
-                        <button
-                          onClick={() => updateQty(index, item.quantity - 1)}
-                          className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 font-bold"
-                        >
-                          -
-                        </button>
-                        <span className="px-3 text-xs font-bold text-gray-900">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQty(index, item.quantity + 1)}
-                          className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 font-bold"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-sm font-extrabold text-brand-700">₹{(item.price * item.quantity).toFixed(2)}</p>
-                        <button
-                          onClick={() => removeItem(index)}
-                          className="text-gray-400 hover:text-red-600 p-1 text-xs"
-                          title="Remove Item"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardBody>
-            </Card>
-
-            {rxRequired && (
-              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 text-xs">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold">Prescription Required for Items in Cart</p>
-                  <p className="mt-0.5 text-amber-800">
-                    You will be prompted to attach an uploaded prescription during checkout so our pharmacist can review it.
+            {/* Prescription Warning Banner if applicable */}
+            {hasRxItems && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1">
+                  <p className="font-bold">Prescription (Rx) Required for One or More Items</p>
+                  <p className="text-amber-800">
+                    Your cart contains Schedule H medicines. You will be able to attach an existing uploaded prescription or upload a new photo/PDF at checkout before order confirmation.
                   </p>
                 </div>
               </div>
             )}
+
+            {/* Dispensing Branch Summary Pill */}
+            <div className="bg-sand-100 rounded-2xl border border-sand-300 p-3.5 flex items-center justify-between text-xs font-mono">
+              <div className="flex items-center gap-2 truncate">
+                <MapPin className="w-4 h-4 text-pine-700 shrink-0" />
+                <span className="truncate">
+                  Dispensed by: <strong>{selectedBranch.name}</strong> ({selectedBranch.city})
+                </span>
+              </div>
+              <Link
+                to="/customer/pharmacies"
+                className="text-pine-800 font-bold hover:underline shrink-0 text-[11px]"
+              >
+                Change Branch
+              </Link>
+            </div>
+
+            {/* Items Table / List */}
+            <div className="bg-white rounded-3xl border border-sand-300 overflow-hidden divide-y divide-sand-200 shadow-2xs">
+              {items.map((item) => (
+                <div
+                  key={item.medicine.id}
+                  className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                >
+                  {/* Medicine Info */}
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={item.medicine.prescriptionRequired ? 'warning' : 'success'}
+                        size="sm"
+                      >
+                        {item.medicine.prescriptionRequired ? 'Rx Required' : 'OTC'}
+                      </Badge>
+                      <span className="font-mono text-[10px] text-gray-400 uppercase tracking-wider">
+                        {item.medicine.dosageForm} • {item.medicine.strength}
+                      </span>
+                    </div>
+
+                    <Link
+                      to={`/customer/medicines/${item.medicine.id}`}
+                      className="font-bold text-gray-900 text-sm sm:text-base hover:text-pine-800 transition-colors block"
+                    >
+                      {item.medicine.name}
+                    </Link>
+
+                    <p className="text-xs text-gray-500 font-sans">
+                      Salt: <span className="text-gray-700">{item.medicine.genericName}</span>
+                    </p>
+
+                    <p className="font-mono text-[11px] text-gray-400">
+                      ₹{item.unitPrice.toFixed(2)} per unit
+                    </p>
+                  </div>
+
+                  {/* Quantity & Price Actions */}
+                  <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-sand-200">
+                    {/* Stepper */}
+                    <div className="flex items-center border border-sand-300 rounded-xl bg-white p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.medicine.id, item.quantity - 1)}
+                        className="w-8 h-8 rounded-lg hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="w-9 text-center font-bold text-xs text-gray-900 font-mono">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.medicine.id, item.quantity + 1)}
+                        className="w-8 h-8 rounded-lg hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Total for item & Remove */}
+                    <div className="text-right min-w-[90px]">
+                      <span className="font-bold text-base text-gray-900 block font-sans">
+                        ₹{(item.unitPrice * item.quantity).toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(item.medicine.id)}
+                        className="text-gray-400 hover:text-red-600 text-[11px] font-mono mt-0.5 transition-colors inline-flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <Link
+                to="/customer/medicines"
+                className="text-xs font-semibold text-gray-600 hover:text-pine-800 flex items-center gap-1.5"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Continue shopping medicines</span>
+              </Link>
+            </div>
           </div>
 
-          {/* Order Summary */}
-          <div>
-            <Card>
-              <CardHeader className="bg-gray-50/60">
-                <h3 className="font-bold text-xs text-gray-800 uppercase tracking-wider">Order Summary</h3>
-              </CardHeader>
-              <CardBody className="p-5 space-y-4">
-                <div className="space-y-2 text-xs text-gray-600">
-                  <div className="flex justify-between">
-                    <span>Items Subtotal</span>
-                    <span className="font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Estimated Delivery Fee</span>
-                    <span className="font-semibold text-gray-900">₹{deliveryFee.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-emerald-600 font-medium">
-                    <span>Discount</span>
-                    <span>-₹{discount.toFixed(2)}</span>
-                  </div>
+          {/* Right Column: Order Summary & Checkout CTA */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-6 shadow-2xs">
+              <h3 className="text-base font-bold text-gray-900 font-sans border-b border-sand-200 pb-3">
+                Order Summary
+              </h3>
+
+              {/* Promo Code Form */}
+              <form onSubmit={handleApplyCoupon} className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-700">Promo Code or Coupon:</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Try MEDBAZAR10"
+                    className="flex-1 px-3 py-2 rounded-xl border border-sand-300 text-xs font-mono uppercase placeholder:font-sans focus:outline-none focus:border-pine-600"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-sand-100 hover:bg-sand-200 text-pine-800 font-semibold text-xs rounded-xl border border-sand-300 transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {appliedCoupon && (
+                  <p className="text-[11px] text-emerald-700 font-mono flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Coupon {appliedCoupon} active (₹{couponDiscount.toFixed(2)} off)</span>
+                  </p>
+                )}
+              </form>
+
+              {/* Price Calculations */}
+              <div className="space-y-3 text-xs divide-y divide-sand-200 pt-1">
+                <div className="flex justify-between text-gray-600">
+                  <span>Items Subtotal</span>
+                  <span className="font-mono font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
                 </div>
 
-                <div className="pt-3 border-t border-gray-100 flex justify-between items-baseline">
-                  <span className="text-sm font-bold text-gray-900">Total Payable</span>
-                  <span className="text-xl font-extrabold text-brand-700">₹{total.toFixed(2)}</span>
+                {finalDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700 pt-2 font-medium">
+                    <span>Discount Savings</span>
+                    <span className="font-mono font-semibold">-₹{finalDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-gray-600 pt-2">
+                  <div>
+                    <span>Delivery Fee</span>
+                    {deliveryFee === 0 && (
+                      <span className="text-[10px] text-emerald-700 font-mono block">Free above ₹500</span>
+                    )}
+                  </div>
+                  <span className="font-mono font-semibold text-gray-900">
+                    {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee.toFixed(2)}`}
+                  </span>
                 </div>
 
-                <Button
-                  onClick={() => navigate('/customer/checkout')}
-                  className="w-full"
-                  size="lg"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                >
-                  Proceed to Checkout
-                </Button>
-              </CardBody>
-            </Card>
+                <div className="flex justify-between items-baseline pt-3 text-sm">
+                  <div>
+                    <span className="font-bold text-gray-900">Final Total</span>
+                    <span className="text-[10px] text-gray-400 font-mono block">Inclusive of GST</span>
+                  </div>
+                  <span className="text-2xl font-extrabold text-pine-800 font-sans">
+                    ₹{grandTotal.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Checkout CTA */}
+              <button
+                type="button"
+                onClick={() => navigate('/customer/checkout')}
+                className="w-full bg-pine-700 hover:bg-pine-800 text-white font-semibold text-sm py-3.5 px-4 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 shadow-xs"
+              >
+                <span>PROCEED TO CHECKOUT</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              {/* Trust Metadata */}
+              <div className="text-[11px] text-gray-500 space-y-1.5 pt-2 border-t border-sand-200 font-sans">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-pine-700" />
+                  <span>Licensed chemist branch packaging</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-pine-700" />
+                  <span>Doorstep delivery or zero-cost counter pickup</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

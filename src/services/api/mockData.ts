@@ -1,12 +1,13 @@
-import { Pharmacy, Branch, Medicine, Inventory, Customer, Order, Prescription, Staff, Category } from '@/types';
+import { Pharmacy, Branch, Medicine, Inventory, Customer, Order, Prescription, Staff, Category, PurchaseOrder, DeliveryAssignment } from '@/types';
 
 export const MOCK_CATEGORIES: Category[] = [
-  { id: 'cat_1', name: 'Antibiotics', description: 'Bacterial infection treatment', medicineCount: 24 },
-  { id: 'cat_2', name: 'Pain Relief & Analgesics', description: 'Painkillers and fever reducers', medicineCount: 45 },
-  { id: 'cat_3', name: 'Cardiovascular', description: 'Heart and blood pressure care', medicineCount: 18 },
-  { id: 'cat_4', name: 'Diabetes Care', description: 'Insulin and blood sugar control', medicineCount: 30 },
-  { id: 'cat_5', name: 'Vitamins & Supplements', description: 'Wellness and immunity boosters', medicineCount: 60 },
-  { id: 'cat_6', name: 'Dermatology & Skincare', description: 'Ointments, creams and lotions', medicineCount: 15 },
+  { id: 'cat_pain', name: 'Pain Relief', description: 'Painkillers, anti-inflammatory and fever reducers', medicineCount: 42 },
+  { id: 'cat_diabetes', name: 'Diabetes Care', description: 'Insulin, blood sugar control and test strips', medicineCount: 28 },
+  { id: 'cat_vitamins', name: 'Vitamins', description: 'Daily wellness, multivitamins and mineral supplements', medicineCount: 54 },
+  { id: 'cat_personal', name: 'Personal Care', description: 'Skin health, hygiene, antiseptics and wellness', medicineCount: 36 },
+  { id: 'cat_baby', name: 'Baby Care', description: 'Gentle pediatric care, baby wipes, and nutrition', medicineCount: 22 },
+  { id: 'cat_antibiotics', name: 'Antibiotics', description: 'Bacterial infection treatment & Schedule H medications', medicineCount: 25 },
+  { id: 'cat_cardiac', name: 'Cardiovascular', description: 'Hypertension, cholesterol and cardiac health', medicineCount: 19 },
 ];
 
 export const MOCK_PHARMACIES: Pharmacy[] = [
@@ -18,7 +19,7 @@ export const MOCK_PHARMACIES: Pharmacy[] = [
     phone: '+91 98230 11223',
     email: 'contact@apothecary.com',
     status: 'ACTIVE',
-    branchCount: 3,
+    branchCount: 2,
     createdAt: '2025-01-15',
   },
   {
@@ -29,17 +30,17 @@ export const MOCK_PHARMACIES: Pharmacy[] = [
     phone: '+91 94220 55443',
     email: 'info@medicure.com',
     status: 'ACTIVE',
-    branchCount: 2,
+    branchCount: 1,
     createdAt: '2025-03-10',
   },
   {
     id: 'pharm_3',
-    name: 'Wellness Chemist',
-    legalName: 'Wellness Chemists Partnership',
+    name: 'Wellness Chemist Network',
+    legalName: 'Wellness Chemists LLP',
     licenseNumber: '20B/MH-MUM-883921',
     phone: '+91 98900 12345',
     email: 'support@wellnesschemist.com',
-    status: 'PENDING',
+    status: 'ACTIVE',
     branchCount: 1,
     createdAt: '2025-09-20',
   }
@@ -79,7 +80,7 @@ export const MOCK_BRANCHES: Branch[] = [
     organizationId: 'pharm_2',
     organizationName: 'MediCure Pharmacy',
     name: 'MediCure Kothrud Branch',
-    address: 'Paud Road, Opp Metro Station',
+    address: 'Paud Road, Opp Metro Pillar 12',
     city: 'Pune',
     state: 'Maharashtra',
     pincode: '411038',
@@ -87,20 +88,34 @@ export const MOCK_BRANCHES: Branch[] = [
     status: 'ACTIVE',
     operatingHours: '24 Hours Open',
     createdAt: '2025-03-10'
+  },
+  {
+    id: 'branch_4',
+    organizationId: 'pharm_3',
+    organizationName: 'Wellness Chemist Network',
+    name: 'Wellness Chemist - Bandra West',
+    address: 'Hill Road, Near Bandra Station',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400050',
+    phone: '+91 98900 12345',
+    status: 'ACTIVE',
+    operatingHours: '08:30 AM - 11:30 PM',
+    createdAt: '2025-09-20'
   }
 ];
 
 export const MOCK_MEDICINES: Medicine[] = [
   {
     id: 'med_1',
-    name: 'Paracetamol 650mg (Dolo)',
-    genericName: 'Paracetamol',
+    name: 'Paracetamol 650mg (Dolo 650)',
+    genericName: 'Paracetamol / Acetaminophen',
     brand: 'Micro Labs',
     composition: 'Paracetamol 650 mg',
     dosageForm: 'TABLET',
     strength: '650mg',
-    categoryId: 'cat_2',
-    categoryName: 'Pain Relief & Analgesics',
+    categoryId: 'cat_pain',
+    categoryName: 'Pain Relief',
     prescriptionRequired: false,
     barcode: '8901234567890',
     manufacturer: 'Micro Labs Ltd',
@@ -114,22 +129,22 @@ export const MOCK_MEDICINES: Medicine[] = [
     composition: 'Amoxicillin 500mg + Clavulanic Acid 125mg',
     dosageForm: 'TABLET',
     strength: '625mg',
-    categoryId: 'cat_1',
+    categoryId: 'cat_antibiotics',
     categoryName: 'Antibiotics',
     prescriptionRequired: true,
     barcode: '8901234567891',
-    manufacturer: 'GlaxoSmithKline',
+    manufacturer: 'GlaxoSmithKline Pharmaceuticals',
     status: 'ACTIVE'
   },
   {
     id: 'med_3',
-    name: 'Metformin HCl 500mg (Glycomet)',
-    genericName: 'Metformin Hydrochloride',
+    name: 'Metformin HCl 500mg (Glycomet 500 SR)',
+    genericName: 'Metformin Hydrochloride Prolonged Release',
     brand: 'USV Ltd',
     composition: 'Metformin Hydrochloride 500 mg',
     dosageForm: 'TABLET',
     strength: '500mg',
-    categoryId: 'cat_4',
+    categoryId: 'cat_diabetes',
     categoryName: 'Diabetes Care',
     prescriptionRequired: true,
     barcode: '8901234567892',
@@ -144,7 +159,7 @@ export const MOCK_MEDICINES: Medicine[] = [
     composition: 'Amlodipine 5 mg',
     dosageForm: 'TABLET',
     strength: '5mg',
-    categoryId: 'cat_3',
+    categoryId: 'cat_cardiac',
     categoryName: 'Cardiovascular',
     prescriptionRequired: true,
     barcode: '8901234567893',
@@ -153,22 +168,68 @@ export const MOCK_MEDICINES: Medicine[] = [
   },
   {
     id: 'med_5',
-    name: 'Multivitamin & Mineral Capsules (Becosules)',
-    genericName: 'Vitamin B Complex + Vitamin C',
+    name: 'Multivitamin & Zinc Capsules (Becosules Z)',
+    genericName: 'Vitamin B-Complex with Vitamin C & Zinc',
     brand: 'Pfizer',
-    composition: 'B-Complex + Vitamin C + Calcium',
+    composition: 'B-Complex + Vitamin C 50mg + Zinc Sulphate 41.4mg',
     dosageForm: 'CAPSULE',
-    strength: 'Standard',
-    categoryId: 'cat_5',
-    categoryName: 'Vitamins & Supplements',
+    strength: 'Standard Adult Formulation',
+    categoryId: 'cat_vitamins',
+    categoryName: 'Vitamins',
     prescriptionRequired: false,
     barcode: '8901234567894',
-    manufacturer: 'Pfizer India',
+    manufacturer: 'Pfizer India Ltd',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'med_6',
+    name: 'Dettol Antiseptic Disinfectant Liquid 250ml',
+    genericName: 'Chloroxylenol Antiseptic Solution',
+    brand: 'Reckitt',
+    composition: 'Chloroxylenol 4.8% w/v, Terpineol, Ethanol',
+    dosageForm: 'OTHER',
+    strength: '250ml Bottle',
+    categoryId: 'cat_personal',
+    categoryName: 'Personal Care',
+    prescriptionRequired: false,
+    barcode: '8901234567895',
+    manufacturer: 'Reckitt Benckiser India',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'med_7',
+    name: 'Sebamed Gentle Baby Cleansing Wash 200ml',
+    genericName: 'pH 5.5 Gentle Sugar-based Syndet',
+    brand: 'Sebapharma',
+    composition: 'pH 5.5 Syndet with Allantoin & Bisabolol',
+    dosageForm: 'OTHER',
+    strength: '200ml Pump',
+    categoryId: 'cat_baby',
+    categoryName: 'Baby Care',
+    prescriptionRequired: false,
+    barcode: '8901234567896',
+    manufacturer: 'Sebapharma Germany (Imported)',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'med_8',
+    name: 'Pantoprazole Gastro-Resistant 40mg (Pan 40)',
+    genericName: 'Pantoprazole Sodium',
+    brand: 'Alkem Laboratories',
+    composition: 'Pantoprazole Sodium equivalent to Pantoprazole 40mg',
+    dosageForm: 'TABLET',
+    strength: '40mg',
+    categoryId: 'cat_pain',
+    categoryName: 'Pain Relief',
+    prescriptionRequired: true,
+    barcode: '8901234567897',
+    manufacturer: 'Alkem Laboratories Ltd',
     status: 'ACTIVE'
   }
 ];
 
 export const MOCK_INVENTORY: Inventory[] = [
+  // Paracetamol (med_1)
   {
     id: 'inv_1',
     organizationId: 'pharm_1',
@@ -176,16 +237,43 @@ export const MOCK_INVENTORY: Inventory[] = [
     branchName: 'Apothecary Main Branch - Pune Station',
     medicineId: 'med_1',
     medicine: MOCK_MEDICINES[0],
-    quantity: 120,
+    quantity: 140,
     reorderLevel: 30,
     sellingPrice: 32.50,
     mrp: 35.00,
     status: 'IN_STOCK',
     updatedAt: '2026-10-02T10:00:00Z',
-    batches: [
-      { id: 'b_1', inventoryId: 'inv_1', batchNumber: 'BCH-2025-091', expiryDate: '2027-08-31', quantity: 120, purchasePrice: 22.00 }
-    ]
   },
+  {
+    id: 'inv_1_b2',
+    organizationId: 'pharm_1',
+    branchId: 'branch_2',
+    branchName: 'Apothecary Wagholi Branch',
+    medicineId: 'med_1',
+    medicine: MOCK_MEDICINES[0],
+    quantity: 65,
+    reorderLevel: 20,
+    sellingPrice: 32.00,
+    mrp: 35.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-02T10:30:00Z',
+  },
+  {
+    id: 'inv_1_b3',
+    organizationId: 'pharm_2',
+    branchId: 'branch_3',
+    branchName: 'MediCure Kothrud Branch',
+    medicineId: 'med_1',
+    medicine: MOCK_MEDICINES[0],
+    quantity: 80,
+    reorderLevel: 25,
+    sellingPrice: 31.50,
+    mrp: 35.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-02T09:15:00Z',
+  },
+
+  // Augmentin (med_2)
   {
     id: 'inv_2',
     organizationId: 'pharm_1',
@@ -193,16 +281,29 @@ export const MOCK_INVENTORY: Inventory[] = [
     branchName: 'Apothecary Main Branch - Pune Station',
     medicineId: 'med_2',
     medicine: MOCK_MEDICINES[1],
-    quantity: 12,
-    reorderLevel: 25,
-    sellingPrice: 210.00,
-    mrp: 230.00,
+    quantity: 14,
+    reorderLevel: 20,
+    sellingPrice: 204.00,
+    mrp: 228.00,
     status: 'LOW_STOCK',
     updatedAt: '2026-10-02T11:30:00Z',
-    batches: [
-      { id: 'b_2', inventoryId: 'inv_2', batchNumber: 'AUG-8831', expiryDate: '2026-12-15', quantity: 12, purchasePrice: 155.00 }
-    ]
   },
+  {
+    id: 'inv_2_b3',
+    organizationId: 'pharm_2',
+    branchId: 'branch_3',
+    branchName: 'MediCure Kothrud Branch',
+    medicineId: 'med_2',
+    medicine: MOCK_MEDICINES[1],
+    quantity: 45,
+    reorderLevel: 15,
+    sellingPrice: 208.00,
+    mrp: 228.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-02T08:00:00Z',
+  },
+
+  // Metformin (med_3)
   {
     id: 'inv_3',
     organizationId: 'pharm_1',
@@ -210,15 +311,134 @@ export const MOCK_INVENTORY: Inventory[] = [
     branchName: 'Apothecary Main Branch - Pune Station',
     medicineId: 'med_3',
     medicine: MOCK_MEDICINES[2],
-    quantity: 85,
-    reorderLevel: 20,
-    sellingPrice: 48.00,
-    mrp: 55.00,
+    quantity: 90,
+    reorderLevel: 25,
+    sellingPrice: 46.00,
+    mrp: 52.00,
     status: 'IN_STOCK',
     updatedAt: '2026-09-30T15:20:00Z',
-    batches: [
-      { id: 'b_3', inventoryId: 'inv_3', batchNumber: 'GLY-7712', expiryDate: '2028-03-31', quantity: 85, purchasePrice: 30.00 }
-    ]
+  },
+  {
+    id: 'inv_3_b2',
+    organizationId: 'pharm_1',
+    branchId: 'branch_2',
+    branchName: 'Apothecary Wagholi Branch',
+    medicineId: 'med_3',
+    medicine: MOCK_MEDICINES[2],
+    quantity: 35,
+    reorderLevel: 15,
+    sellingPrice: 47.00,
+    mrp: 52.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-01T14:10:00Z',
+  },
+
+  // Amlodipine (med_4)
+  {
+    id: 'inv_4',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    medicineId: 'med_4',
+    medicine: MOCK_MEDICINES[3],
+    quantity: 55,
+    reorderLevel: 20,
+    sellingPrice: 38.00,
+    mrp: 44.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-01T12:00:00Z',
+  },
+
+  // Becosules (med_5)
+  {
+    id: 'inv_5',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    medicineId: 'med_5',
+    medicine: MOCK_MEDICINES[4],
+    quantity: 110,
+    reorderLevel: 30,
+    sellingPrice: 45.00,
+    mrp: 50.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-01T10:00:00Z',
+  },
+  {
+    id: 'inv_5_b3',
+    organizationId: 'pharm_2',
+    branchId: 'branch_3',
+    branchName: 'MediCure Kothrud Branch',
+    medicineId: 'med_5',
+    medicine: MOCK_MEDICINES[4],
+    quantity: 75,
+    reorderLevel: 25,
+    sellingPrice: 44.00,
+    mrp: 50.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-02T16:00:00Z',
+  },
+
+  // Dettol (med_6)
+  {
+    id: 'inv_6',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    medicineId: 'med_6',
+    medicine: MOCK_MEDICINES[5],
+    quantity: 40,
+    reorderLevel: 10,
+    sellingPrice: 135.00,
+    mrp: 145.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-01T11:00:00Z',
+  },
+
+  // Sebamed (med_7)
+  {
+    id: 'inv_7',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    medicineId: 'med_7',
+    medicine: MOCK_MEDICINES[6],
+    quantity: 25,
+    reorderLevel: 8,
+    sellingPrice: 440.00,
+    mrp: 480.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-01T13:00:00Z',
+  },
+
+  // Pan 40 (med_8)
+  {
+    id: 'inv_8',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    medicineId: 'med_8',
+    medicine: MOCK_MEDICINES[7],
+    quantity: 85,
+    reorderLevel: 25,
+    sellingPrice: 142.00,
+    mrp: 155.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-01T17:00:00Z',
+  },
+  {
+    id: 'inv_8_b3',
+    organizationId: 'pharm_2',
+    branchId: 'branch_3',
+    branchName: 'MediCure Kothrud Branch',
+    medicineId: 'med_8',
+    medicine: MOCK_MEDICINES[7],
+    quantity: 60,
+    reorderLevel: 20,
+    sellingPrice: 140.00,
+    mrp: 155.00,
+    status: 'IN_STOCK',
+    updatedAt: '2026-10-02T12:00:00Z',
   }
 ];
 
@@ -230,7 +450,24 @@ export const MOCK_CUSTOMERS: Customer[] = [
     phone: '+91 98765 43210',
     createdAt: '2025-05-10',
     addresses: [
-      { id: 'addr_1', type: 'HOME', addressLine: 'Flat 402, Sunshine Heights, Kalyani Nagar', city: 'Pune', state: 'Maharashtra', pincode: '411006', isDefault: true }
+      {
+        id: 'addr_1',
+        type: 'HOME',
+        addressLine: 'Flat 402, Sunshine Heights, Kalyani Nagar',
+        city: 'Pune',
+        state: 'Maharashtra',
+        pincode: '411006',
+        isDefault: true
+      },
+      {
+        id: 'addr_2',
+        type: 'WORK',
+        addressLine: 'Tower B, 6th Floor, Cybercity IT Park, Magarpatta',
+        city: 'Pune',
+        state: 'Maharashtra',
+        pincode: '411028',
+        isDefault: false
+      }
     ]
   },
   {
@@ -240,7 +477,15 @@ export const MOCK_CUSTOMERS: Customer[] = [
     phone: '+91 97654 32109',
     createdAt: '2025-06-18',
     addresses: [
-      { id: 'addr_2', type: 'HOME', addressLine: 'Bungalow 12, Lane 5, Koregaon Park', city: 'Pune', state: 'Maharashtra', pincode: '411001', isDefault: true }
+      {
+        id: 'addr_3',
+        type: 'HOME',
+        addressLine: 'Bungalow 12, Lane 5, Koregaon Park',
+        city: 'Pune',
+        state: 'Maharashtra',
+        pincode: '411001',
+        isDefault: true
+      }
     ]
   }
 ];
@@ -261,13 +506,31 @@ export const MOCK_ORDERS: Order[] = [
     paymentStatus: 'PAID',
     paymentMethod: 'ONLINE',
     items: [
-      { id: 'oi_1', orderId: 'ord_101', medicineId: 'med_2', medicineName: 'Amoxicillin & Potassium Clavulanate 625mg (Augmentin)', quantity: 1, unitPrice: 210.00, total: 210.00, prescriptionRequired: true },
-      { id: 'oi_2', orderId: 'ord_101', medicineId: 'med_1', medicineName: 'Paracetamol 650mg (Dolo)', quantity: 2, unitPrice: 32.50, total: 65.00, prescriptionRequired: false }
+      {
+        id: 'oi_1',
+        orderId: 'ord_101',
+        medicineId: 'med_2',
+        medicineName: 'Amoxicillin & Potassium Clavulanate 625mg (Augmentin)',
+        quantity: 1,
+        unitPrice: 204.00,
+        total: 204.00,
+        prescriptionRequired: true
+      },
+      {
+        id: 'oi_2',
+        orderId: 'ord_101',
+        medicineId: 'med_1',
+        medicineName: 'Paracetamol 650mg (Dolo 650)',
+        quantity: 2,
+        unitPrice: 32.50,
+        total: 65.00,
+        prescriptionRequired: false
+      }
     ],
-    subtotal: 275.00,
+    subtotal: 269.00,
     discount: 15.00,
     deliveryFee: 40.00,
-    total: 300.00,
+    total: 294.00,
     deliveryAddress: 'Flat 402, Sunshine Heights, Kalyani Nagar, Pune 411006',
     prescriptionId: 'presc_1',
     prescriptionStatus: 'PENDING',
@@ -280,22 +543,76 @@ export const MOCK_ORDERS: Order[] = [
     pharmacyName: 'Apothecary Healthcare',
     branchId: 'branch_1',
     branchName: 'Apothecary Main Branch - Pune Station',
-    customerId: 'cust_2',
-    customerName: 'Priya Verma',
-    customerPhone: '+91 97654 32109',
+    customerId: 'cust_1',
+    customerName: 'Rajesh Sharma',
+    customerPhone: '+91 98765 43210',
     orderType: 'ONLINE',
-    status: 'CONFIRMED',
+    status: 'DELIVERED',
     paymentStatus: 'PAID',
     paymentMethod: 'UPI',
     items: [
-      { id: 'oi_3', orderId: 'ord_102', medicineId: 'med_5', medicineName: 'Multivitamin & Mineral Capsules (Becosules)', quantity: 3, unitPrice: 45.00, total: 135.00, prescriptionRequired: false }
+      {
+        id: 'oi_3',
+        orderId: 'ord_102',
+        medicineId: 'med_5',
+        medicineName: 'Multivitamin & Zinc Capsules (Becosules Z)',
+        quantity: 2,
+        unitPrice: 45.00,
+        total: 90.00,
+        prescriptionRequired: false
+      },
+      {
+        id: 'oi_4',
+        orderId: 'ord_102',
+        medicineId: 'med_6',
+        medicineName: 'Dettol Antiseptic Disinfectant Liquid 250ml',
+        quantity: 1,
+        unitPrice: 135.00,
+        total: 135.00,
+        prescriptionRequired: false
+      }
     ],
-    subtotal: 135.00,
+    subtotal: 225.00,
+    discount: 10.00,
+    deliveryFee: 0,
+    total: 215.00,
+    deliveryAddress: 'Flat 402, Sunshine Heights, Kalyani Nagar, Pune 411006',
+    createdAt: '2026-09-28T14:10:00Z'
+  },
+  {
+    id: 'ord_103',
+    orderNumber: 'MB-2026-8803',
+    organizationId: 'pharm_2',
+    pharmacyName: 'MediCure Pharmacy',
+    branchId: 'branch_3',
+    branchName: 'MediCure Kothrud Branch',
+    customerId: 'cust_2',
+    customerName: 'Priya Verma',
+    customerPhone: '+91 97654 32109',
+    orderType: 'PICKUP',
+    status: 'READY',
+    paymentStatus: 'PAID',
+    paymentMethod: 'UPI',
+    items: [
+      {
+        id: 'oi_5',
+        orderId: 'ord_103',
+        medicineId: 'med_3',
+        medicineName: 'Metformin HCl 500mg (Glycomet 500 SR)',
+        quantity: 2,
+        unitPrice: 46.00,
+        total: 92.00,
+        prescriptionRequired: true
+      }
+    ],
+    subtotal: 92.00,
     discount: 0,
-    deliveryFee: 30.00,
-    total: 165.00,
-    deliveryAddress: 'Bungalow 12, Lane 5, Koregaon Park, Pune 411001',
-    createdAt: '2026-10-02T19:10:00Z'
+    deliveryFee: 0,
+    total: 92.00,
+    deliveryAddress: 'Store Pickup: MediCure Kothrud Branch Counter',
+    prescriptionId: 'presc_2',
+    prescriptionStatus: 'APPROVED',
+    createdAt: '2026-10-03T11:20:00Z'
   }
 ];
 
@@ -308,11 +625,27 @@ export const MOCK_PRESCRIPTIONS: Prescription[] = [
     customerPhone: '+91 98765 43210',
     orderId: 'ord_101',
     fileUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&q=80',
-    fileName: 'Rx_Dr_Patil_Augmentin.jpg',
+    fileName: 'Rx_Dr_Patil_Augmentin_Dolo.jpg',
     fileType: 'IMAGE',
     status: 'PENDING_REVIEW',
-    notes: 'Uploaded by customer for Order #MB-2026-8801',
+    notes: 'Uploaded for Order #MB-2026-8801 - Augmentin 625mg',
     createdAt: '2026-10-02T18:46:00Z'
+  },
+  {
+    id: 'presc_2',
+    organizationId: 'pharm_2',
+    customerId: 'cust_1',
+    customerName: 'Rajesh Sharma',
+    customerPhone: '+91 98765 43210',
+    orderId: 'ord_103',
+    fileUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&q=80',
+    fileName: 'Rx_Dr_Kulkarni_Glycomet_Pan40.pdf',
+    fileType: 'PDF',
+    status: 'APPROVED',
+    notes: 'Prescription verified by Reg. Pharmacist Amit Deshmukh (#MH-44091)',
+    reviewedBy: 'Amit Deshmukh',
+    reviewedAt: '2026-10-03T11:35:00Z',
+    createdAt: '2026-10-01T09:15:00Z'
   }
 ];
 
@@ -355,5 +688,133 @@ export const MOCK_STAFF: Staff[] = [
     role: 'CASHIER',
     status: 'ACTIVE',
     joinedAt: '2025-03-15'
+  },
+  {
+    id: 'stf_4',
+    organizationId: 'pharm_1',
+    branchId: 'branch_2',
+    branchName: 'Apothecary Wagholi Branch',
+    userId: 'u_mgr',
+    name: 'Vikram Singhania',
+    email: 'vikram.s@apothecary.com',
+    phone: '+91 98230 77665',
+    role: 'BRANCH_MANAGER',
+    status: 'ACTIVE',
+    joinedAt: '2025-03-01'
+  },
+  {
+    id: 'stf_5',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    userId: 'u_deliv',
+    name: 'Ramesh Pawar',
+    email: 'ramesh.p@apothecary.com',
+    phone: '+91 98230 33221',
+    role: 'DELIVERY_STAFF',
+    status: 'ACTIVE',
+    joinedAt: '2025-04-10'
   }
 ];
+
+export const MOCK_PURCHASES: PurchaseOrder[] = [
+  {
+    id: 'po_1',
+    purchaseNumber: 'PO-2026-091',
+    supplierName: 'Cipla Wholesale Distributors Pvt Ltd',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    itemsCount: 120,
+    itemsSummary: 'Dolo 650 (50 strips), Pan 40 (40 strips), Augmentin 625 (30 strips)',
+    total: 45200.00,
+    status: 'RECEIVED',
+    purchaseDate: '2026-09-28'
+  },
+  {
+    id: 'po_2',
+    purchaseNumber: 'PO-2026-092',
+    supplierName: 'Sun Pharma Logistics Ltd',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    itemsCount: 80,
+    itemsSummary: 'Glycomet 500 SR (50 strips), Amlong 5mg (30 strips)',
+    total: 28450.00,
+    status: 'RECEIVED',
+    purchaseDate: '2026-10-02'
+  },
+  {
+    id: 'po_3',
+    purchaseNumber: 'PO-2026-093',
+    supplierName: 'GSK India Healthcare Supply',
+    organizationId: 'pharm_1',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    itemsCount: 60,
+    itemsSummary: 'Augmentin 625mg (60 strips)',
+    total: 31200.00,
+    status: 'PENDING',
+    purchaseDate: '2026-10-11'
+  },
+  {
+    id: 'po_4',
+    purchaseNumber: 'PO-2026-094',
+    supplierName: 'Abbott Healthcare Supply Co',
+    organizationId: 'pharm_1',
+    branchId: 'branch_2',
+    branchName: 'Apothecary Wagholi Branch',
+    itemsCount: 150,
+    itemsSummary: 'Thyronorm 50mcg (100 btls), Cremaffin (50 btls)',
+    total: 52100.00,
+    status: 'RECEIVED',
+    purchaseDate: '2026-10-08'
+  }
+];
+
+export const MOCK_DELIVERIES: DeliveryAssignment[] = [
+  {
+    id: 'deliv_1',
+    orderId: 'ord_101',
+    orderNumber: 'MB-2026-8801',
+    customerName: 'Rajesh Sharma',
+    customerPhone: '+91 98765 43210',
+    deliveryAddress: 'Flat 402, Sunshine Heights, Kalyani Nagar, Pune 411006',
+    deliveryStaffName: 'Ramesh Pawar',
+    deliveryStaffPhone: '+91 98230 33221',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    status: 'OUT_FOR_DELIVERY',
+    assignedTime: '2026-10-13 18:30',
+  },
+  {
+    id: 'deliv_2',
+    orderId: 'ord_102',
+    orderNumber: 'MB-2026-8802',
+    customerName: 'Priya Verma',
+    customerPhone: '+91 97654 32109',
+    deliveryAddress: 'Bungalow 12, Lane 5, Koregaon Park, Pune 411001',
+    deliveryStaffName: 'Ramesh Pawar',
+    deliveryStaffPhone: '+91 98230 33221',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    status: 'DELIVERED',
+    assignedTime: '2026-10-12 11:15',
+    completedTime: '2026-10-12 12:05'
+  },
+  {
+    id: 'deliv_3',
+    orderId: 'ord_104',
+    orderNumber: 'MB-2026-8804',
+    customerName: 'Anita Desai',
+    customerPhone: '+91 98221 44332',
+    deliveryAddress: 'Plot 88, Viman Nagar, Pune 411014',
+    deliveryStaffName: 'Ramesh Pawar',
+    deliveryStaffPhone: '+91 98230 33221',
+    branchId: 'branch_1',
+    branchName: 'Apothecary Main Branch - Pune Station',
+    status: 'ASSIGNED',
+    assignedTime: '2026-10-13 19:45',
+  }
+];
+

@@ -1,59 +1,176 @@
-import React, { useState, useEffect } from 'react';
-import { Calculator, Search, Plus, Trash2, Printer, CheckCircle, CreditCard, DollarSign, QrCode, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import React, { useState } from 'react';
+import {
+  Search,
+  Plus,
+  Trash2,
+  Printer,
+  CheckCircle2,
+  CreditCard,
+  Banknote,
+  QrCode,
+  AlertTriangle,
+  History,
+  ShoppingCart,
+  User,
+  UserPlus,
+  X,
+  RotateCcw,
+  Barcode
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { Medicine, Inventory, PosSaleItem, PosSale } from '@/types';
-import { MOCK_INVENTORY } from '@/services/api/mockData';
-import { posService } from '@/services/api/posService';
+import { MOCK_INVENTORY, MOCK_CATEGORIES, MOCK_CUSTOMERS } from '@/services/api/mockData';
+import { Inventory, PosSaleItem, PosSale } from '@/types';
+
+interface SalesHistoryRecord {
+  receipt: string;
+  date: string;
+  customer: string;
+  items: string;
+  itemsCount: number;
+  amount: number;
+  payment: 'CASH' | 'UPI' | 'CARD';
+  cashier: string;
+  itemsDetail: PosSaleItem[];
+  subtotal: number;
+  discount: number;
+}
 
 export const PharmacyPosPage: React.FC = () => {
   const { showToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [cartItems, setCartItems] = useState<PosSaleItem[]>([]);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
-  const [discount, setDiscount] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [completedSale, setCompletedSale] = useState<PosSale | null>(null);
 
+  // Active view: 'POS' or 'HISTORY'
+  const [activeTab, setActiveTab] = useState<'POS' | 'HISTORY'>('POS');
+
+  // Inventory State (Single Source of Truth)
   const [inventoryList, setInventoryList] = useState<Inventory[]>(MOCK_INVENTORY);
 
-  const filteredInventory = inventoryList.filter(inv => {
-    if (!searchQuery) return true;
+  // SEARCH STATES (Left Column)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+
+  // CART STATES (Center Column)
+  const [cartItems, setCartItems] = useState<PosSaleItem[]>([]);
+
+  // CHECKOUT & CUSTOMER STATES (Right Column)
+  const [customerMode, setCustomerMode] = useState<'WALK_IN' | 'EXISTING' | 'NEW'>('WALK_IN');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [customCustomerName, setCustomCustomerName] = useState('');
+  const [customCustomerPhone, setCustomCustomerPhone] = useState('');
+
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
+  const [discount, setDiscount] = useState<number>(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Receipt & Print Modal
+  const [completedReceipt, setCompletedReceipt] = useState<SalesHistoryRecord | null>(null);
+
+  // SALES HISTORY
+  const [salesHistory, setSalesHistory] = useState<SalesHistoryRecord[]>([
+    {
+      receipt: 'RCP-2026-1042',
+      date: '2026-10-13 19:15',
+      customer: 'Walk-in Customer',
+      items: 'Dolo 650 (2x), Pan 40 (1x)',
+      itemsCount: 3,
+      amount: 202.00,
+      payment: 'CASH',
+      cashier: 'Kiran Kulkarni',
+      subtotal: 202.00,
+      discount: 0,
+      itemsDetail: [
+        { id: '1', medicineId: 'med_1', medicineName: 'Paracetamol 650mg (Dolo 650)', quantity: 2, unitPrice: 30.00, total: 60.00 },
+        { id: '2', medicineId: 'med_8', medicineName: 'Pantoprazole Gastro-Resistant 40mg (Pan 40)', quantity: 1, unitPrice: 142.00, total: 142.00 }
+      ]
+    },
+    {
+      receipt: 'RCP-2026-1041',
+      date: '2026-10-13 18:40',
+      customer: 'Rajesh Sharma',
+      items: 'Augmentin 625 (1x), Dolo 650 (1x)',
+      itemsCount: 2,
+      amount: 228.00,
+      payment: 'UPI',
+      cashier: 'Kiran Kulkarni',
+      subtotal: 238.00,
+      discount: 10.00,
+      itemsDetail: [
+        { id: '3', medicineId: 'med_2', medicineName: 'Amoxicillin & Clavulanate 625mg (Augmentin)', quantity: 1, unitPrice: 208.00, total: 208.00 },
+        { id: '4', medicineId: 'med_1', medicineName: 'Paracetamol 650mg (Dolo 650)', quantity: 1, unitPrice: 30.00, total: 30.00 }
+      ]
+    },
+    {
+      receipt: 'RCP-2026-1040',
+      date: '2026-10-13 17:22',
+      customer: 'Priya Verma',
+      items: 'Metformin HCl 500mg (2x)',
+      itemsCount: 2,
+      amount: 92.00,
+      payment: 'CARD',
+      cashier: 'Amit Deshmukh',
+      subtotal: 92.00,
+      discount: 0,
+      itemsDetail: [
+        { id: '5', medicineId: 'med_3', medicineName: 'Metformin HCl 500mg (Glycomet 500 SR)', quantity: 2, unitPrice: 46.00, total: 92.00 }
+      ]
+    },
+    {
+      receipt: 'RCP-2026-1039',
+      date: '2026-10-13 16:05',
+      customer: 'Walk-in Customer',
+      items: 'Dettol Disinfectant 250ml (1x)',
+      itemsCount: 1,
+      amount: 135.00,
+      payment: 'CASH',
+      cashier: 'Kiran Kulkarni',
+      subtotal: 135.00,
+      discount: 0,
+      itemsDetail: [
+        { id: '6', medicineId: 'med_6', medicineName: 'Dettol Antiseptic Liquid 250ml', quantity: 1, unitPrice: 135.00, total: 135.00 }
+      ]
+    }
+  ]);
+
+  // Filter Search Results (by medicine name, barcode, generic name, category)
+  const searchResults = inventoryList.filter((inv) => {
+    // Category filter
+    if (categoryFilter !== 'ALL' && inv.medicine?.categoryId !== categoryFilter) {
+      return false;
+    }
+
+    if (!searchQuery.trim()) return true;
+
     const q = searchQuery.toLowerCase();
-    return (
-      inv.medicine?.name.toLowerCase().includes(q) ||
-      inv.medicine?.genericName.toLowerCase().includes(q) ||
-      inv.medicine?.brand.toLowerCase().includes(q) ||
-      inv.medicine?.barcode?.includes(q)
-    );
+    const nameMatch = inv.medicine?.name.toLowerCase().includes(q) || false;
+    const genericMatch = inv.medicine?.genericName.toLowerCase().includes(q) || false;
+    const barcodeMatch = (inv.medicine?.barcode || '').includes(q);
+    const brandMatch = inv.medicine?.brand.toLowerCase().includes(q) || false;
+
+    return nameMatch || genericMatch || barcodeMatch || brandMatch;
   });
 
-  const addItemToPosCart = (inv: Inventory) => {
+  // CART OPERATIONS
+  const addToCart = (inv: Inventory) => {
     if (inv.quantity <= 0) {
-      showToast('Out of Stock', `${inv.medicine?.name} has 0 stock remaining`, 'error');
+      showToast('Out of Stock', `${inv.medicine?.name} is currently out of stock`, 'error');
       return;
     }
 
-    const existingIndex = cartItems.findIndex(i => i.medicineId === inv.medicineId);
-    if (existingIndex > -1) {
-      const currentQty = cartItems[existingIndex].quantity;
+    const existingIdx = cartItems.findIndex(i => i.medicineId === inv.medicineId);
+    if (existingIdx > -1) {
+      const currentQty = cartItems[existingIdx].quantity;
       if (currentQty >= inv.quantity) {
-        showToast('Stock Limit Reached', `Only ${inv.quantity} units available in branch stock`, 'warning');
+        showToast('Stock Limit', `Cannot exceed ${inv.quantity} units available in branch inventory`, 'warning');
         return;
       }
-      const next = [...cartItems];
-      next[existingIndex].quantity += 1;
-      next[existingIndex].total = next[existingIndex].quantity * next[existingIndex].unitPrice;
-      setCartItems(next);
+      const updated = [...cartItems];
+      updated[existingIdx].quantity += 1;
+      updated[existingIdx].total = updated[existingIdx].quantity * updated[existingIdx].unitPrice;
+      setCartItems(updated);
     } else {
       const newItem: PosSaleItem = {
-        id: `psi_${Date.now()}_${Math.random()}`,
+        id: `cart_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         medicineId: inv.medicineId,
         medicineName: inv.medicine?.name || 'Unknown',
         quantity: 1,
@@ -65,313 +182,687 @@ export const PharmacyPosPage: React.FC = () => {
     }
   };
 
-  const updateCartQty = (index: number, newQty: number) => {
+  const updateQuantity = (idx: number, newQty: number) => {
     if (newQty < 1) return;
-    const item = cartItems[index];
+    const item = cartItems[idx];
     const inv = inventoryList.find(i => i.medicineId === item.medicineId);
     if (inv && newQty > inv.quantity) {
-      showToast('Stock Limit Exceeded', `Cannot add more than ${inv.quantity} available stock`, 'warning');
+      showToast('Exceeds Stock', `Only ${inv.quantity} units in branch inventory`, 'warning');
       return;
     }
-    const next = [...cartItems];
-    next[index].quantity = newQty;
-    next[index].total = newQty * next[index].unitPrice;
-    setCartItems(next);
+    const updated = [...cartItems];
+    updated[idx].quantity = newQty;
+    updated[idx].total = newQty * updated[idx].unitPrice;
+    setCartItems(updated);
   };
 
-  const removeFromCart = (index: number) => {
-    setCartItems(cartItems.filter((_, i) => i !== index));
+  const removeFromCart = (idx: number) => {
+    setCartItems(cartItems.filter((_, i) => i !== idx));
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
-  const grandTotal = Math.max(0, subtotal - discount);
+  const clearCart = () => {
+    setCartItems([]);
+    setDiscount(0);
+  };
 
-  const handleCheckout = async () => {
+  // CHECKOUT TOTALS
+  const subtotal = cartItems.reduce((acc, item) => acc + item.total, 0);
+  const total = Math.max(0, subtotal - discount);
+
+  // CUSTOMER RESOLUTION
+  const getResolvedCustomer = (): { name: string; phone: string } => {
+    if (customerMode === 'WALK_IN') {
+      return { name: 'Walk-in Customer', phone: 'Counter Direct' };
+    }
+    if (customerMode === 'EXISTING') {
+      const found = MOCK_CUSTOMERS.find(c => c.id === selectedCustomerId);
+      return {
+        name: found ? found.name : 'Walk-in Customer',
+        phone: found ? found.phone : 'Counter Direct'
+      };
+    }
+    return {
+      name: customCustomerName.trim() || 'Walk-in Customer',
+      phone: customCustomerPhone.trim() || 'Counter Direct'
+    };
+  };
+
+  // COMPLETE SALE
+  const handleCompleteSale = () => {
     if (cartItems.length === 0) {
-      showToast('Empty POS Cart', 'Please add at least one medicine item to complete counter sale', 'warning');
+      showToast('Cart is Empty', 'Please select at least one item to complete sale', 'warning');
       return;
     }
 
     setIsProcessing(true);
-    try {
-      const sale = await posService.processSale({
-        organizationId: 'pharm_1',
-        branchId: 'branch_1',
-        items: cartItems,
-        paymentMethod,
-        customerName: customerName.trim() || undefined,
-        customerPhone: customerPhone.trim() || undefined,
-        discount
+
+    // Simulate fast offline POS execution
+    setTimeout(() => {
+      // 1. Deduct quantity from branch inventoryList
+      const nextInv = inventoryList.map(inv => {
+        const cartMatch = cartItems.find(c => c.medicineId === inv.medicineId);
+        if (cartMatch) {
+          const nextQty = Math.max(0, inv.quantity - cartMatch.quantity);
+          return {
+            ...inv,
+            quantity: nextQty,
+            status: (nextQty === 0 ? 'OUT_OF_STOCK' : nextQty <= inv.reorderLevel ? 'LOW_STOCK' : 'IN_STOCK') as any
+          };
+        }
+        return inv;
       });
+      setInventoryList(nextInv);
 
-      // Update local state to reflect reduced branch stock instantly
-      setInventoryList([...MOCK_INVENTORY]);
+      // 2. Build receipt record
+      const customer = getResolvedCustomer();
+      const newReceiptNumber = `RCP-2026-${1043 + salesHistory.length}`;
+      const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const itemsSummary = cartItems.map(i => `${i.medicineName.split(' ')[0]} (${i.quantity}x)`).join(', ');
 
-      setCompletedSale(sale);
+      const record: SalesHistoryRecord = {
+        receipt: newReceiptNumber,
+        date: nowStr,
+        customer: customer.name,
+        items: itemsSummary,
+        itemsCount: cartItems.reduce((s, i) => s + i.quantity, 0),
+        amount: total,
+        payment: paymentMethod,
+        cashier: 'Kiran Kulkarni (Cashier)',
+        itemsDetail: [...cartItems],
+        subtotal,
+        discount
+      };
+
+      setSalesHistory([record, ...salesHistory]);
+      setCompletedReceipt(record);
       setIsProcessing(false);
-      showToast('Sale Completed', `Receipt ${sale.receiptNumber} generated. Branch inventory updated.`, 'success');
-    } catch (err: any) {
-      setIsProcessing(false);
-      showToast('POS Sale Error', err.message || 'Transaction failed', 'error');
-    }
-  };
-
-  const resetPosForm = () => {
-    setCartItems([]);
-    setCustomerName('');
-    setCustomerPhone('');
-    setDiscount(0);
-    setCompletedSale(null);
-    setSearchQuery('');
+      clearCart();
+      showToast('Sale Completed', `Receipt ${newReceiptNumber} generated. Stock deducted.`, 'success');
+    }, 400);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-gray-900">Pharmacy Counter POS</h1>
-            <Badge variant="success" size="sm" dot>Offline Store Terminal</Badge>
+    <div className="space-y-3 font-sans text-gray-900 antialiased">
+      {/* Top POS Utility Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-sand-300 pb-2.5">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900">
+            Pharmacy Counter POS
+          </h1>
+          <div className="flex items-center gap-1.5 font-mono text-[11px] bg-sand-200 text-gray-700 px-2 py-0.5 rounded border border-sand-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+            <span>Terminal 01 • Pune Station Branch</span>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">Branch: Apothecary Main Branch • Shared Branch Stock Engine</p>
+        </div>
+
+        {/* Tab switcher: Active POS vs Sales History */}
+        <div className="flex rounded border border-sand-300 bg-white p-0.5 font-mono text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('POS')}
+            className={`px-3 py-1 rounded transition-colors font-medium flex items-center gap-1.5 ${
+              activeTab === 'POS' ? 'bg-pine-700 text-white font-bold' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            <span>Billing Terminal</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('HISTORY')}
+            className={`px-3 py-1 rounded transition-colors font-medium flex items-center gap-1.5 ${
+              activeTab === 'HISTORY' ? 'bg-pine-700 text-white font-bold' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Sales History ({salesHistory.length})</span>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-180px)]">
-        {/* Left 7 cols: Medicine Search & Quick Selection Grid */}
-        <div className="lg:col-span-7 flex flex-col bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-          {/* Search bar */}
-          <div className="p-3.5 bg-gray-50/80 border-b border-gray-200">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Scan barcode or search medicine name, generic composition..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm bg-white font-medium focus:ring-2 focus:ring-brand-200 focus:border-brand-500 focus:outline-none"
-                autoFocus
-              />
-              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-            </div>
-          </div>
+      {activeTab === 'POS' ? (
+        /* ========================================================================= */
+        /* 3-COLUMN DESKTOP POS LAYOUT: LEFT, CENTER, RIGHT */
+        /* ========================================================================= */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
+          {/* ----------------------------------------------------------------------- */}
+          {/* LEFT: Medicine Search (4 cols) */}
+          {/* ----------------------------------------------------------------------- */}
+          <div className="lg:col-span-4 bg-white border border-sand-300 rounded-md p-3 space-y-3 shadow-2xs flex flex-col h-[calc(100vh-175px)]">
+            <div className="space-y-2 border-b border-sand-200 pb-2.5">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500 font-bold block">
+                Medicine Catalogue Search
+              </span>
 
-          {/* Product Items Table / Grid */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredInventory.map((inv) => {
-              const isOut = inv.quantity === 0;
-              return (
-                <div
-                  key={inv.id}
-                  onClick={() => !isOut && addItemToPosCart(inv)}
-                  className={`p-3 rounded-lg border flex items-center justify-between transition-all select-none cursor-pointer ${
-                    isOut
-                      ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
-                      : 'bg-white border-gray-200 hover:border-brand-500 hover:bg-brand-50/20 shadow-2xs'
-                  }`}
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 text-sm">{inv.medicine?.name}</span>
-                      {inv.medicine?.prescriptionRequired && <Badge variant="warning" size="sm">Rx</Badge>}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Brand: {inv.medicine?.brand} • Batch: {inv.batches?.[0]?.batchNumber || 'N/A'} • Exp: {inv.batches?.[0]?.expiryDate || 'N/A'}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-sm font-extrabold text-brand-700 block">₹{inv.sellingPrice.toFixed(2)}</span>
-                    <span className={`text-[11px] font-bold ${isOut ? 'text-red-600' : inv.quantity <= inv.reorderLevel ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      {isOut ? 'OUT OF STOCK' : `Stock: ${inv.quantity} units`}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right 5 cols: Active POS Cart & Billing Panel */}
-        <div className="lg:col-span-5 flex flex-col bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-          {/* Header */}
-          <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calculator className="w-4 h-4 text-teal-400" />
-              <h2 className="font-bold text-xs uppercase tracking-wider">Current Receipt Bill ({cartItems.length})</h2>
-            </div>
-            {cartItems.length > 0 && (
-              <button onClick={() => setCartItems([])} className="text-xs text-red-400 hover:text-red-300">
-                Clear Cart
-              </button>
-            )}
-          </div>
-
-          {/* Cart Table */}
-          <div className="flex-1 overflow-y-auto divide-y divide-gray-100 p-2">
-            {cartItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-400">
-                <Calculator className="w-10 h-10 mb-2 opacity-40" />
-                <p className="text-xs font-semibold">POS Cart Empty</p>
-                <p className="text-[11px] text-gray-400">Click medicines on the left list to add to counter sale</p>
-              </div>
-            ) : (
-              cartItems.map((item, idx) => (
-                <div key={item.id} className="p-2.5 flex items-center justify-between text-xs gap-2">
-                  <div className="flex-1 truncate">
-                    <span className="font-bold text-gray-900 block truncate">{item.medicineName}</span>
-                    <span className="text-[10px] text-gray-400">₹{item.unitPrice.toFixed(2)} / unit</span>
-                  </div>
-
-                  <div className="flex items-center border border-gray-300 rounded bg-white">
-                    <button
-                      onClick={() => updateCartQty(idx, item.quantity - 1)}
-                      className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 font-bold"
-                    >
-                      -
-                    </button>
-                    <span className="px-2 text-xs font-bold text-gray-900">{item.quantity}</span>
-                    <button
-                      onClick={() => updateCartQty(idx, item.quantity + 1)}
-                      className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="text-right min-w-[60px]">
-                    <span className="font-bold text-gray-900 block">₹{item.total.toFixed(2)}</span>
-                    <button onClick={() => removeFromCart(idx)} className="text-gray-400 hover:text-red-600 text-[10px]">
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Customer & Payment Form */}
-          <div className="p-3.5 bg-gray-50 border-t border-gray-200 space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Walk-in Customer Name (Opt)"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="py-1.5 text-xs bg-white"
-              />
-              <Input
-                placeholder="Phone Number (Opt)"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="py-1.5 text-xs bg-white"
-              />
-            </div>
-
-            {/* Payment Mode */}
-            <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { id: 'CASH', label: 'Cash', icon: DollarSign },
-                { id: 'UPI', label: 'UPI QR', icon: QrCode },
-                { id: 'CARD', label: 'Card', icon: CreditCard },
-              ].map((pm) => {
-                const Icon = pm.icon;
-                const active = paymentMethod === pm.id;
-                return (
-                  <button
-                    key={pm.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(pm.id as any)}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
-                      active ? 'bg-brand-600 text-white border-brand-700 shadow-xs' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{pm.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Totals & Complete */}
-            <div className="space-y-1.5 text-xs pt-1 border-t border-gray-200">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span className="font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center text-gray-600">
-                <span>Discount (₹)</span>
+              {/* Unified Search Input (Medicine name, barcode, generic name) */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
                 <input
-                  type="number"
-                  min="0"
-                  value={discount || ''}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                  placeholder="0"
-                  className="w-16 px-2 py-0.5 border border-gray-300 rounded text-right font-bold text-xs bg-white"
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Name, barcode, generic composition..."
+                  className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
                 />
               </div>
 
-              <div className="flex justify-between items-baseline pt-1">
-                <span className="font-extrabold text-sm text-gray-900">Grand Total</span>
-                <span className="font-extrabold text-xl text-brand-700">₹{grandTotal.toFixed(2)}</span>
+              {/* Category Filter */}
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-2 py-1 rounded border border-sand-300 text-xs bg-white text-gray-700 focus:outline-none focus:border-pine-700 font-sans"
+              >
+                <option value="ALL">All Categories ({MOCK_CATEGORIES.length})</option>
+                {MOCK_CATEGORIES.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search Results list */}
+            <div className="flex-1 overflow-y-auto divide-y divide-sand-200 space-y-1 pr-1">
+              {searchResults.length === 0 ? (
+                <div className="py-12 text-center text-xs text-gray-400">
+                  No matching medicines found in branch stock.
+                </div>
+              ) : (
+                searchResults.map((inv) => {
+                  const isOut = inv.quantity === 0;
+                  const isLow = inv.quantity > 0 && inv.quantity <= inv.reorderLevel;
+
+                  return (
+                    <div
+                      key={inv.id}
+                      onClick={() => !isOut && addToCart(inv)}
+                      className={`p-2 rounded border transition-colors select-none cursor-pointer flex flex-col gap-1 ${
+                        isOut
+                          ? 'bg-sand-100/60 border-sand-200 opacity-60 cursor-not-allowed'
+                          : 'bg-white border-sand-200 hover:border-pine-700 hover:bg-sand-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold text-xs text-gray-900 block truncate" title={inv.medicine?.name}>
+                            {inv.medicine?.name}
+                          </span>
+                          <span className="text-[10px] text-gray-500 block truncate">
+                            {inv.medicine?.genericName} • {inv.medicine?.brand}
+                          </span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-gray-900 shrink-0">
+                          ₹{inv.sellingPrice.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Strength, Price, Stock & Availability */}
+                      <div className="flex items-center justify-between text-[11px] font-mono pt-0.5">
+                        <span className="text-gray-500 text-[10px]">
+                          Strength: {inv.medicine?.strength || 'Std'}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-gray-600">Stock: {inv.quantity}</span>
+                          {isOut ? (
+                            <span className="px-1 py-0.2 rounded bg-red-100 text-red-800 text-[9px] font-bold">
+                              Out of Stock
+                            </span>
+                          ) : isLow ? (
+                            <span className="px-1 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">
+                              Low Stock
+                            </span>
+                          ) : (
+                            <span className="px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold">
+                              In Stock
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* CENTER: Cart / Selected Items (5 cols) */}
+          {/* ----------------------------------------------------------------------- */}
+          <div className="lg:col-span-5 bg-white border border-sand-300 rounded-md p-3 space-y-3 shadow-2xs flex flex-col h-[calc(100vh-175px)]">
+            <div className="flex items-center justify-between border-b border-sand-200 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500 font-bold">
+                  Active POS Cart
+                </span>
+                <span className="font-mono text-[11px] bg-sand-200 text-gray-800 px-1.5 py-0.2 rounded">
+                  {cartItems.length} lines
+                </span>
+              </div>
+              {cartItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="text-[11px] text-red-600 hover:text-red-700 font-semibold font-mono"
+                >
+                  Clear Cart
+                </button>
+              )}
+            </div>
+
+            {/* Cart Table: Medicine, Quantity, Unit Price, Total, Remove */}
+            <div className="flex-1 overflow-y-auto">
+              {cartItems.length === 0 ? (
+                <div className="py-24 text-center text-xs text-gray-400 space-y-1">
+                  <ShoppingCart className="w-8 h-8 mx-auto text-gray-300 stroke-1" />
+                  <p className="font-medium text-gray-500">Cart is empty</p>
+                  <p className="text-[11px] text-gray-400">Select medications from the catalogue search on the left</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-sand-200 text-[10px] font-mono uppercase text-gray-500 bg-sand-50/70">
+                      <th className="py-1.5 px-2">Medicine</th>
+                      <th className="py-1.5 px-2 text-center">Qty</th>
+                      <th className="py-1.5 px-2 text-right">Unit Price</th>
+                      <th className="py-1.5 px-2 text-right">Total</th>
+                      <th className="py-1.5 px-1 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-200">
+                    {cartItems.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-sand-50/40 transition-colors">
+                        {/* Medicine */}
+                        <td className="py-2 px-2 max-w-[140px]">
+                          <span className="font-bold text-gray-900 block truncate" title={item.medicineName}>
+                            {item.medicineName}
+                          </span>
+                          <span className="font-mono text-[10px] text-gray-400">
+                            Batch: {item.batchNumber}
+                          </span>
+                        </td>
+
+                        {/* Quantity with + / - controls */}
+                        <td className="py-2 px-2 text-center">
+                          <div className="inline-flex items-center border border-sand-300 rounded bg-white">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(idx, item.quantity - 1)}
+                              className="px-1.5 py-0.5 text-gray-600 hover:bg-sand-100 font-mono text-[11px]"
+                            >
+                              -
+                            </button>
+                            <span className="px-2 font-mono font-bold text-xs text-gray-900">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(idx, item.quantity + 1)}
+                              className="px-1.5 py-0.5 text-gray-600 hover:bg-sand-100 font-mono text-[11px]"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Unit Price */}
+                        <td className="py-2 px-2 text-right font-mono text-gray-700">
+                          ₹{item.unitPrice.toFixed(2)}
+                        </td>
+
+                        {/* Total */}
+                        <td className="py-2 px-2 text-right font-mono font-bold text-gray-900">
+                          ₹{item.total.toFixed(2)}
+                        </td>
+
+                        {/* Remove */}
+                        <td className="py-2 px-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(idx)}
+                            className="text-gray-400 hover:text-red-600 p-1"
+                            title="Remove row"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Quick summary line at bottom of cart */}
+            {cartItems.length > 0 && (
+              <div className="pt-2 border-t border-sand-200 flex items-center justify-between font-mono text-xs text-gray-600">
+                <span>{cartItems.reduce((acc, i) => acc + i.quantity, 0)} units across {cartItems.length} lines</span>
+                <span className="font-bold text-gray-900">Subtotal: ₹{subtotal.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* RIGHT: Sale Summary, Customer & Checkout (3 cols) */}
+          {/* ----------------------------------------------------------------------- */}
+          <div className="lg:col-span-3 bg-white border border-sand-300 rounded-md p-3.5 space-y-3.5 shadow-2xs flex flex-col h-[calc(100vh-175px)] justify-between">
+            <div className="space-y-3">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500 font-bold block border-b border-sand-200 pb-1.5">
+                Customer & Checkout
+              </span>
+
+              {/* CUSTOMER SELECTION: Walk-in / Existing / New */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-1 bg-sand-100 p-0.5 rounded border border-sand-200 text-[10px] font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setCustomerMode('WALK_IN')}
+                    className={`py-1 rounded text-center font-semibold transition-colors ${
+                      customerMode === 'WALK_IN' ? 'bg-pine-700 text-white' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Walk-in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomerMode('EXISTING')}
+                    className={`py-1 rounded text-center font-semibold transition-colors ${
+                      customerMode === 'EXISTING' ? 'bg-pine-700 text-white' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Existing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomerMode('NEW')}
+                    className={`py-1 rounded text-center font-semibold transition-colors ${
+                      customerMode === 'NEW' ? 'bg-pine-700 text-white' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    New +
+                  </button>
+                </div>
+
+                {/* Walk-in note */}
+                {customerMode === 'WALK_IN' && (
+                  <p className="text-[11px] text-gray-500 font-mono">
+                    Direct counter sale (anonymous cash receipt)
+                  </p>
+                )}
+
+                {/* Existing customer select */}
+                {customerMode === 'EXISTING' && (
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                    className="w-full p-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700 font-sans"
+                  >
+                    <option value="">Select registered patient...</option>
+                    {MOCK_CUSTOMERS.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
+                    ))}
+                  </select>
+                )}
+
+                {/* New customer quick entry */}
+                {customerMode === 'NEW' && (
+                  <div className="space-y-1.5 text-xs">
+                    <input
+                      type="text"
+                      placeholder="Patient Full Name"
+                      value={customCustomerName}
+                      onChange={(e) => setCustomCustomerName(e.target.value)}
+                      className="w-full px-2 py-1 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Mobile (+91)"
+                      value={customCustomerPhone}
+                      onChange={(e) => setCustomCustomerPhone(e.target.value)}
+                      className="w-full px-2 py-1 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700 font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* PAYMENT OPTIONS: Cash / UPI / Card */}
+              <div className="space-y-1.5 pt-1 border-t border-sand-200">
+                <span className="font-mono text-[10px] uppercase font-bold text-gray-500 block">
+                  Payment Method
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: 'CASH', label: 'Cash', icon: Banknote },
+                    { id: 'UPI', label: 'UPI QR', icon: QrCode },
+                    { id: 'CARD', label: 'Card', icon: CreditCard },
+                  ].map((p) => {
+                    const Icon = p.icon;
+                    const isActive = paymentMethod === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setPaymentMethod(p.id as any)}
+                        className={`py-1.5 px-2 rounded text-xs font-semibold flex items-center justify-center gap-1 border transition-colors ${
+                          isActive
+                            ? 'bg-pine-700 text-white border-pine-700 shadow-2xs'
+                            : 'bg-white hover:bg-sand-100 text-gray-700 border-sand-300'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* TOTALS: Subtotal, Discount, Total */}
+              <div className="space-y-1.5 pt-2 border-t border-sand-200 text-xs">
+                <div className="flex justify-between text-gray-600 font-mono">
+                  <span>Subtotal</span>
+                  <span className="text-gray-900 font-semibold">₹{subtotal.toFixed(2)}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-gray-600 font-mono">
+                  <span>Discount (₹)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={discount || ''}
+                    onChange={(e) => setDiscount(Number(e.target.value))}
+                    placeholder="0"
+                    className="w-16 px-1.5 py-0.5 border border-sand-300 rounded text-right font-bold text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+                  />
+                </div>
+
+                <div className="flex justify-between items-baseline pt-2 border-t border-sand-300 font-mono">
+                  <span className="font-bold text-sm text-gray-900">Total Payable</span>
+                  <span className="font-bold text-lg text-pine-800">₹{total.toFixed(2)}</span>
+                </div>
               </div>
             </div>
 
-            <Button
-              onClick={handleCheckout}
-              isLoading={isProcessing}
-              disabled={cartItems.length === 0}
-              className="w-full bg-pharmacy-600 hover:bg-pharmacy-700 text-white"
-              size="lg"
+            {/* PRIMARY CTA: COMPLETE SALE */}
+            <button
+              type="button"
+              onClick={handleCompleteSale}
+              disabled={isProcessing || cartItems.length === 0}
+              className="w-full py-2.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-2xs disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Complete Sale & Print Receipt
-            </Button>
+              {isProcessing ? 'Processing Sale...' : 'COMPLETE SALE'}
+            </button>
           </div>
         </div>
-      </div>
+      ) : (
+        /* ========================================================================= */
+        /* SALES HISTORY VIEW: Receipt, Date, Customer, Items, Amount, Payment, Cashier */
+        /* ========================================================================= */
+        <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-2xs">
+          <div className="p-3 border-b border-sand-200 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold uppercase font-mono text-gray-900">
+                Terminal Sales Audit Log
+              </h2>
+              <p className="text-xs text-gray-500">
+                Completed counter receipts recorded in the branch ledger
+              </p>
+            </div>
+            <span className="font-mono text-xs text-gray-600 font-bold">
+              Total Revenue: ₹{salesHistory.reduce((s, r) => s + r.amount, 0).toFixed(2)}
+            </span>
+          </div>
 
-      {/* Printable Receipt Modal */}
-      {completedSale && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-sand-200 text-[10px] font-mono uppercase tracking-wider text-gray-500 bg-sand-50/80">
+                  <th className="py-2.5 px-3">Receipt</th>
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Customer</th>
+                  <th className="py-2.5 px-3">Items</th>
+                  <th className="py-2.5 px-3">Amount</th>
+                  <th className="py-2.5 px-3">Payment</th>
+                  <th className="py-2.5 px-3">Cashier</th>
+                  <th className="py-2.5 px-3 text-right">Reprint</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sand-200 font-sans">
+                {salesHistory.map((s) => (
+                  <tr key={s.receipt} className="hover:bg-sand-50/50 transition-colors">
+                    <td className="py-2.5 px-3 font-mono font-bold text-gray-900">
+                      {s.receipt}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-gray-600">
+                      {s.date}
+                    </td>
+                    <td className="py-2.5 px-3 font-semibold text-gray-900">
+                      {s.customer}
+                    </td>
+                    <td className="py-2.5 px-3 text-gray-600 max-w-[200px] truncate" title={s.items}>
+                      {s.items}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-gray-900">
+                      ₹{s.amount.toFixed(2)}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-sand-100 border border-sand-300 text-gray-800 font-bold">
+                        {s.payment}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-gray-600 text-[11px]">
+                      {s.cashier}
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setCompletedReceipt(s)}
+                        className="px-2 py-1 rounded bg-sand-100 hover:bg-sand-200 border border-sand-300 text-pine-800 font-mono text-[11px] font-semibold"
+                      >
+                        Receipt
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* CLEAN PRINTABLE RECEIPT MODAL */}
+      {/* ========================================================================= */}
+      {completedReceipt && (
         <Modal
           isOpen={true}
-          onClose={resetPosForm}
-          title="POS Counter Receipt Generated"
+          onClose={() => setCompletedReceipt(null)}
+          title={`Counter Sale Slip — ${completedReceipt.receipt}`}
           size="sm"
           footer={
-            <>
-              <Button variant="outline" size="sm" onClick={() => window.print()} leftIcon={<Printer className="w-4 h-4" />}>
-                Print Receipt
-              </Button>
-              <Button size="sm" onClick={resetPosForm}>
-                Next Customer Sale
-              </Button>
-            </>
+            <div className="flex items-center justify-between w-full">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-2xs"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Slip</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompletedReceipt(null)}
+                className="px-3 py-1.5 rounded border border-sand-300 bg-white text-xs font-semibold text-gray-700 hover:bg-sand-100"
+              >
+                Done
+              </button>
+            </div>
           }
         >
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-xs space-y-3 font-mono">
-            <div className="text-center border-b border-gray-300 pb-2">
-              <h3 className="font-bold text-sm text-gray-900 uppercase">Apothecary Healthcare</h3>
-              <p className="text-[10px] text-gray-500">Pune Station Branch • Lic #20B/MH-PUN-104928</p>
-              <p className="text-[10px] font-bold text-gray-700 mt-1">Receipt #{completedSale.receiptNumber}</p>
-              <p className="text-[10px] text-gray-400">{new Date(completedSale.createdAt).toLocaleString()}</p>
+          {/* Printable Receipt Container */}
+          <div className="p-4 bg-white border border-sand-300 rounded font-mono text-xs space-y-3 print:border-none print:p-0">
+            {/* Header */}
+            <div className="text-center border-b border-dashed border-gray-300 pb-2.5 space-y-0.5">
+              <h2 className="font-extrabold text-sm text-gray-900 uppercase">
+                Apothecary Healthcare
+              </h2>
+              <p className="text-[10px] text-gray-500">
+                Pune Station Branch • Shop 12-14, Central Plaza, Pune
+              </p>
+              <p className="text-[10px] text-gray-500">
+                Drug Lic: 20B/MH-PUN-104928 • GSTIN: 27AABCA1234F1Z5
+              </p>
+              <div className="pt-1.5 flex justify-between text-[10px] text-gray-600">
+                <span>Receipt: <strong className="text-gray-900">{completedReceipt.receipt}</strong></span>
+                <span>Date: {completedReceipt.date}</span>
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-600">
+                <span>Customer: {completedReceipt.customer}</span>
+                <span>Cashier: {completedReceipt.cashier.split(' ')[0]}</span>
+              </div>
             </div>
 
-            <div className="space-y-1">
-              {completedSale.items.map(item => (
-                <div key={item.id} className="flex justify-between">
-                  <span>{item.quantity}x {item.medicineName}</span>
-                  <span className="font-bold">₹{item.total.toFixed(2)}</span>
+            {/* Line items */}
+            <div className="space-y-1 border-b border-dashed border-gray-300 pb-2 text-[11px]">
+              <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
+                <span>Item</span>
+                <span className="text-right">Qty × Price = Amount</span>
+              </div>
+              {completedReceipt.itemsDetail.map((item) => (
+                <div key={item.id} className="flex justify-between items-baseline">
+                  <div className="truncate max-w-[170px]">
+                    <span className="font-bold text-gray-900">{item.medicineName}</span>
+                  </div>
+                  <div className="text-right font-mono shrink-0">
+                    {item.quantity} × ₹{item.unitPrice.toFixed(2)} = <strong className="text-gray-900">₹{item.total.toFixed(2)}</strong>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-gray-300 pt-2 space-y-1">
-              <div className="flex justify-between"><span>Subtotal:</span><span>₹{completedSale.subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Discount:</span><span>-₹{completedSale.discount.toFixed(2)}</span></div>
-              <div className="flex justify-between font-bold text-sm"><span>Total Paid ({completedSale.paymentMethod}):</span><span>₹{completedSale.total.toFixed(2)}</span></div>
+            {/* Subtotal, Discount & Total */}
+            <div className="space-y-1 text-[11px]">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal:</span>
+                <span>₹{completedReceipt.subtotal.toFixed(2)}</span>
+              </div>
+              {completedReceipt.discount > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Discount:</span>
+                  <span>-₹{completedReceipt.discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-xs pt-1 border-t border-dashed border-gray-300 text-gray-900">
+                <span>Net Total Paid ({completedReceipt.payment}):</span>
+                <span>₹{completedReceipt.amount.toFixed(2)}</span>
+              </div>
             </div>
 
-            <div className="text-center pt-2 text-[10px] text-emerald-700 font-sans font-bold">
-              ✓ Single Branch Inventory Updated Automatically
+            {/* Footer */}
+            <div className="text-center pt-2 border-t border-dashed border-gray-300 text-[10px] text-gray-500 space-y-0.5">
+              <p>Verified by Registered Pharmacist</p>
+              <p>Keep this receipt for medicine returns within 7 days</p>
+              <p className="font-sans font-semibold text-emerald-700 pt-0.5">
+                ✓ Branch stock updated in Med Bazar single stock engine
+              </p>
             </div>
           </div>
         </Modal>

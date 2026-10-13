@@ -1,118 +1,319 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Package, Clock, CheckCircle2, MapPin, ShieldCheck, ArrowLeft, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import {
+  Package,
+  Clock,
+  CheckCircle2,
+  MapPin,
+  ShieldCheck,
+  ArrowLeft,
+  FileText,
+  Truck,
+  Store,
+  Phone,
+  RotateCcw
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
-import { MOCK_ORDERS } from '@/services/api/mockData';
+import { useToast } from '@/components/ui/Toast';
+import { useCart } from '@/context/CartContext';
+import { MOCK_ORDERS, MOCK_MEDICINES } from '@/services/api/mockData';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
+
   const order = MOCK_ORDERS.find(o => o.id === id) || MOCK_ORDERS[0];
 
-  const statusSteps = [
-    { key: 'PENDING', label: 'Order Created' },
-    { key: 'PRESCRIPTION_REVIEW', label: 'Prescription Review' },
-    { key: 'CONFIRMED', label: 'Confirmed by Pharmacy' },
-    { key: 'PREPARING', label: 'Packed' },
-    { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
-    { key: 'DELIVERED', label: 'Delivered' }
+  // Exact 6 timeline stages required:
+  // 1. Order placed
+  // 2. Confirmed
+  // 3. Preparing
+  // 4. Ready
+  // 5. Out for Delivery
+  // 6. Delivered
+  const timelineStages = [
+    { key: 'PENDING', label: 'Order placed', time: '10:14 AM' },
+    { key: 'CONFIRMED', label: 'Confirmed', time: '10:20 AM' },
+    { key: 'PREPARING', label: 'Preparing', time: '10:35 AM' },
+    { key: 'READY', label: 'Ready', time: '11:00 AM' },
+    { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', time: '11:15 AM' },
+    { key: 'DELIVERED', label: 'Delivered', time: '11:45 AM' },
   ];
 
+  // Map order status to timeline step index
+  const getStageIndex = (status: string) => {
+    switch (status) {
+      case 'DELIVERED':
+        return 5;
+      case 'OUT_FOR_DELIVERY':
+        return 4;
+      case 'READY':
+        return 3;
+      case 'PREPARING':
+        return 2;
+      case 'CONFIRMED':
+        return 1;
+      case 'PRESCRIPTION_REVIEW':
+        return 1; // Under review by pharmacist
+      case 'PENDING':
+      default:
+        return 0;
+    }
+  };
+
+  const currentStageIndex = getStageIndex(order.status);
+
+  const handleReorder = () => {
+    order.items.forEach(i => {
+      const med = MOCK_MEDICINES.find(m => m.id === i.medicineId);
+      if (med) {
+        addToCart(med, i.quantity, undefined, i.unitPrice);
+      }
+    });
+    showToast('Items Added to Cart', 'Items from this order have been added to your shopping cart.', 'success');
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs
         items={[
-          { label: 'Customer', href: '/customer' },
+          { label: 'Home', href: '/customer' },
           { label: 'Orders', href: '/customer/orders' },
-          { label: order.orderNumber }
+          { label: `#${order.orderNumber}` }
         ]}
       />
 
-      <Link to="/customer/orders" className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-800">
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to orders
-      </Link>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-sand-300 pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">Order #{order.orderNumber}</h1>
-            <Badge variant={order.status === 'PRESCRIPTION_REVIEW' ? 'warning' : 'success'} dot>
+            <Link
+              to="/customer/orders"
+              className="p-1 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-sand-100 transition-colors"
+              title="Back to orders"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-sans">
+              Order #{order.orderNumber}
+            </h1>
+            <Badge
+              variant={
+                order.status === 'DELIVERED'
+                  ? 'success'
+                  : order.status === 'PRESCRIPTION_REVIEW'
+                  ? 'warning'
+                  : 'brand'
+              }
+              dot
+            >
               {order.status.replace('_', ' ')}
             </Badge>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Placed on {new Date(order.createdAt).toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-1 font-mono">
+            Placed on {new Date(order.createdAt).toLocaleString('en-IN')} • Dispensing Branch: {order.branchName}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleReorder}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sand-100 hover:bg-sand-200 border border-sand-300 text-pine-800 font-semibold text-xs transition-colors self-start sm:self-auto shadow-2xs"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Reorder Items</span>
+        </button>
+      </div>
+
+      {/* Minimal Visual Treatment Status Timeline */}
+      <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6 shadow-2xs">
+        <div className="flex items-center justify-between border-b border-sand-200 pb-3">
+          <span className="font-mono text-xs uppercase tracking-wider text-pine-800 font-bold">
+            Fulfillment Timeline
+          </span>
+          <span className="font-mono text-[11px] text-gray-400">
+            Estimated Delivery: Within 45 Minutes
+          </span>
+        </div>
+
+        {/* Restrained Step Timeline */}
+        <div className="relative">
+          {/* Timeline progress track behind items */}
+          <div className="hidden sm:block absolute top-3.5 left-4 right-4 h-0.5 bg-sand-200 -z-0" />
+
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 relative z-10">
+            {timelineStages.map((stage, idx) => {
+              const isPast = idx < currentStageIndex;
+              const isCurrent = idx === currentStageIndex;
+
+              return (
+                <div key={stage.key} className="flex flex-col sm:items-center text-left sm:text-center space-y-2">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-all ${
+                      isPast
+                        ? 'bg-pine-700 text-white'
+                        : isCurrent
+                        ? 'bg-pine-700 text-white ring-4 ring-pine-100'
+                        : 'bg-sand-100 border border-sand-300 text-gray-400'
+                    }`}
+                  >
+                    {isPast ? '✓' : idx + 1}
+                  </div>
+                  <div>
+                    <span
+                      className={`text-xs block font-sans ${
+                        isCurrent
+                          ? 'font-bold text-gray-900'
+                          : isPast
+                          ? 'font-medium text-gray-700'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      {stage.label}
+                    </span>
+                    <span className="font-mono text-[10px] text-gray-400 block mt-0.5">
+                      {isPast || isCurrent ? stage.time : '—'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Workflow Progress Bar */}
-      <Card>
-        <CardBody className="p-6">
-          <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4">Live Fulfillment Status</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-            {statusSteps.map((step, index) => (
-              <div key={step.key} className="text-center space-y-1.5">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
-                    order.status === step.key
-                      ? 'bg-brand-600 text-white ring-4 ring-brand-100'
-                      : index < 2
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 text-gray-400'
-                  }`}
-                >
-                  {index + 1}
-                </div>
-                <span className="text-[11px] font-semibold text-gray-700 block leading-tight">{step.label}</span>
+      {/* Order Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Items Breakdown */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Prescription Status Banner if order has Rx */}
+          {order.prescriptionId && (
+            <div className="p-4 rounded-2xl bg-sand-100 border border-sand-300 flex items-start gap-3 text-xs">
+              <FileText className="w-5 h-5 text-pine-700 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-bold text-gray-900 block font-sans">
+                  Attached Medical Prescription (Rx #{order.prescriptionId})
+                </span>
+                <p className="text-gray-600 font-sans">
+                  Reviewed and verified by on-duty licensed pharmacist at {order.branchName}.
+                </p>
               </div>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
+            </div>
+          )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Items */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader className="bg-gray-50/60">
-              <h3 className="font-bold text-xs text-gray-800 uppercase tracking-wider">Order Items</h3>
-            </CardHeader>
-            <CardBody className="p-0 divide-y divide-gray-100">
-              {order.items.map((item) => (
-                <div key={item.id} className="p-4 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="font-bold text-gray-900 text-sm">{item.medicineName}</h4>
-                    <p className="text-xs text-gray-500">₹{item.unitPrice.toFixed(2)} x {item.quantity}</p>
-                  </div>
-                  <span className="font-bold text-gray-900 text-sm">₹{item.total.toFixed(2)}</span>
-                </div>
-              ))}
-            </CardBody>
-          </Card>
+          {/* Itemized Table */}
+          <div className="bg-white rounded-3xl border border-sand-300 overflow-hidden shadow-2xs">
+            <div className="bg-sand-100 px-6 py-3.5 border-b border-sand-300 font-mono text-xs uppercase tracking-wider text-gray-700 font-bold">
+              Dispensed Items ({order.items.length})
+            </div>
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-sand-200 text-gray-400 font-mono text-[10px] uppercase">
+                  <th className="py-2.5 px-6 font-semibold">Medicine Description</th>
+                  <th className="py-2.5 px-4 font-semibold text-center">Quantity</th>
+                  <th className="py-2.5 px-4 font-semibold text-right">Unit Price</th>
+                  <th className="py-2.5 px-6 font-semibold text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sand-200">
+                {order.items.map((item) => (
+                  <tr key={item.id} className="hover:bg-sand-50/40">
+                    <td className="py-4 px-6 font-sans">
+                      <p className="font-bold text-gray-900">{item.medicineName}</p>
+                      <p className="text-[11px] text-gray-400 font-mono">
+                        Item ID: {item.medicineId}
+                      </p>
+                    </td>
+                    <td className="py-4 px-4 text-center font-mono font-semibold text-gray-800">
+                      {item.quantity}
+                    </td>
+                    <td className="py-4 px-4 text-right font-mono text-gray-600">
+                      ₹{item.unitPrice.toFixed(2)}
+                    </td>
+                    <td className="py-4 px-6 text-right font-sans font-bold text-gray-900">
+                      ₹{item.total.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Info Card */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="bg-gray-50/60">
-              <h3 className="font-bold text-xs text-gray-800 uppercase tracking-wider">Pharmacy & Delivery Info</h3>
-            </CardHeader>
-            <CardBody className="p-4 space-y-3 text-xs">
-              <div>
-                <span className="text-gray-400 block font-medium">Dispensing Branch:</span>
-                <span className="font-bold text-gray-900">{order.branchName}</span>
+        {/* Right Column: Pharmacy Details & Financial Receipt */}
+        <div className="space-y-6">
+          {/* Pharmacy & Delivery Information Card */}
+          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs text-xs">
+            <h3 className="font-bold text-sm text-gray-900 border-b border-sand-200 pb-3 font-mono uppercase tracking-wider">
+              Dispensing & Delivery Info
+            </h3>
+
+            <div className="space-y-2">
+              <span className="font-mono text-[10px] text-gray-400 uppercase block">Dispensing Chemist:</span>
+              <p className="font-bold text-gray-900 font-sans">{order.pharmacyName || order.organizationName || 'Apothecary Healthcare'}</p>
+              <p className="text-gray-600 font-sans">{order.branchName || 'Main Branch'}</p>
+            </div>
+
+            <div className="pt-2 border-t border-sand-200 space-y-2">
+              <span className="font-mono text-[10px] text-gray-400 uppercase block">Fulfillment Method:</span>
+              <div className="flex items-center gap-2 font-bold text-gray-900">
+                <Truck className="w-4 h-4 text-pine-700" />
+                <span>Doorstep Delivery</span>
               </div>
-              <div>
-                <span className="text-gray-400 block font-medium">Delivery Address:</span>
-                <span className="text-gray-700">{order.deliveryAddress}</span>
+              <p className="text-gray-600 font-sans">
+                {order.customerName} • {order.customerPhone}
+              </p>
+              <p className="text-gray-500 font-mono text-[11px]">
+                {order.deliveryAddress || order.shippingAddress || 'Plot 402, MG Road, Pune, Maharashtra - 411001'}
+              </p>
+            </div>
+          </div>
+
+          {/* Receipt Breakdown */}
+          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs text-xs">
+            <h3 className="font-bold text-sm text-gray-900 border-b border-sand-200 pb-3 font-mono uppercase tracking-wider">
+              Payment Summary
+            </h3>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-gray-600">
+                <span>Items Subtotal</span>
+                <span className="font-mono font-semibold text-gray-900">₹{order.subtotal.toFixed(2)}</span>
               </div>
-              <div className="pt-2 border-t border-gray-100 flex justify-between">
-                <span className="font-bold text-gray-900">Total Paid</span>
-                <span className="font-extrabold text-brand-700 text-base">₹{order.total.toFixed(2)}</span>
+
+              {order.discount > 0 && (
+                <div className="flex justify-between text-emerald-700 font-medium">
+                  <span>Discount Applied</span>
+                  <span className="font-mono font-semibold">-₹{order.discount.toFixed(2)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between text-gray-600">
+                <span>Delivery & Handling</span>
+                <span className="font-mono font-semibold text-gray-900">
+                  {order.deliveryFee === 0 ? 'FREE' : `₹${order.deliveryFee.toFixed(2)}`}
+                </span>
               </div>
-            </CardBody>
-          </Card>
+
+              <div className="border-t border-sand-200 pt-3 flex justify-between items-baseline">
+                <div>
+                  <span className="font-bold text-sm text-gray-900 font-sans">Total Paid</span>
+                  <span className="text-[10px] text-gray-400 font-mono block">
+                    {order.paymentMethod} • {order.paymentStatus}
+                  </span>
+                </div>
+                <span className="text-2xl font-extrabold text-pine-800 font-sans">
+                  ₹{order.total.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-sand-200 text-[11px] text-gray-500 flex items-center gap-1.5 font-sans">
+              <ShieldCheck className="w-4 h-4 text-pine-700 shrink-0" />
+              <span>Tax invoice digitally recorded in pharmacy records</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

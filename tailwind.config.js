@@ -6,6 +6,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+      },
       colors: {
         brand: {
           50: '#f0fdfa',
@@ -26,6 +30,21 @@ export default {
           500: '#22c55e',
           600: '#16a34a',
           700: '#15803d',
+        },
+        sand: {
+          50: '#FAF8F5',
+          100: '#F5F2EB',
+          200: '#EAE4D6',
+          300: '#DDD5C2',
+          400: '#C8BEA7',
+        },
+        pine: {
+          50: '#F1F8F4',
+          100: '#E0F0E7',
+          600: '#23533E',
+          700: '#1B4332',
+          800: '#143427',
+          900: '#0E241B',
         }
       },
     },
