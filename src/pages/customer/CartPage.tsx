@@ -65,21 +65,21 @@ export const CartPage: React.FC = () => {
       </div>
 
       {items.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-3xl border border-sand-300 space-y-4 max-w-xl mx-auto p-8 shadow-2xs">
-          <div className="w-16 h-16 rounded-2xl bg-sand-100 text-gray-400 flex items-center justify-center mx-auto">
-            <ShoppingBag className="w-8 h-8" />
+        <div className="text-center py-16 sm:py-20 bg-white rounded-lg border border-sand-300 space-y-4 max-w-xl mx-auto p-6 sm:p-8 shadow-sm">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-sand-100 text-gray-400 flex items-center justify-center mx-auto">
+            <ShoppingBag className="w-8 h-8" aria-hidden="true" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900">Your shopping cart is empty</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900">Your shopping cart is empty</h3>
           <p className="text-xs text-gray-500 max-w-sm mx-auto">
             Browse our verified pharmacy inventory to add prescribed medicines or daily healthcare supplies.
           </p>
           <div className="pt-2">
             <Link
               to="/customer/medicines"
-              className="inline-flex items-center gap-2 bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-3 rounded-xl transition-colors shadow-2xs"
+              className="inline-flex items-center gap-2 bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-3 rounded-lg transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <span>Explore Medicine Catalogue</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
           </div>
         </div>
@@ -89,8 +89,8 @@ export const CartPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             {/* Prescription Warning Banner if applicable */}
             {hasRxItems && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 flex items-start gap-3">
-                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="p-4 sm:p-5 rounded-lg bg-amber-50/90 border border-amber-200 text-amber-900 flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="text-xs space-y-1">
                   <p className="font-bold">Prescription (Rx) Required for One or More Items</p>
                   <p className="text-amber-800">
@@ -101,9 +101,9 @@ export const CartPage: React.FC = () => {
             )}
 
             {/* Dispensing Branch Summary Pill */}
-            <div className="bg-sand-100 rounded-2xl border border-sand-300 p-3.5 flex items-center justify-between text-xs font-mono">
+            <div className="bg-sand-100 rounded-lg border border-sand-300 p-3.5 flex items-center justify-between text-xs font-mono">
               <div className="flex items-center gap-2 truncate">
-                <MapPin className="w-4 h-4 text-pine-700 shrink-0" />
+                <MapPin className="w-4 h-4 text-pine-700 shrink-0" aria-hidden="true" />
                 <span className="truncate">
                   Dispensed by: <strong>{selectedBranch.name}</strong> ({selectedBranch.city})
                 </span>
@@ -117,7 +117,7 @@ export const CartPage: React.FC = () => {
             </div>
 
             {/* Items Table / List */}
-            <div className="bg-white rounded-3xl border border-sand-300 overflow-hidden divide-y divide-sand-200 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 overflow-hidden divide-y divide-sand-200 shadow-sm">
               {items.map((item) => (
                 <div
                   key={item.medicine.id}
@@ -156,25 +156,25 @@ export const CartPage: React.FC = () => {
                   {/* Quantity & Price Actions */}
                   <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-sand-200">
                     {/* Stepper */}
-                    <div className="flex items-center border border-sand-300 rounded-xl bg-white p-0.5">
+                    <div className="flex items-center border border-sand-300 rounded-lg bg-white p-0.5">
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.medicine.id, item.quantity - 1)}
-                        className="w-8 h-8 rounded-lg hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors"
-                        aria-label="Decrease quantity"
+                        className="w-8 h-8 rounded hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                        aria-label={`Decrease quantity of ${item.medicine.name}`}
                       >
-                        <Minus className="w-3.5 h-3.5" />
+                        <Minus className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
-                      <span className="w-9 text-center font-bold text-xs text-gray-900 font-mono">
+                      <span className="w-9 text-center font-bold text-xs text-gray-900 font-mono" aria-live="polite">
                         {item.quantity}
                       </span>
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.medicine.id, item.quantity + 1)}
-                        className="w-8 h-8 rounded-lg hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors"
-                        aria-label="Increase quantity"
+                        className="w-8 h-8 rounded hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                        aria-label={`Increase quantity of ${item.medicine.name}`}
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
                     </div>
 
@@ -186,9 +186,10 @@ export const CartPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => removeFromCart(item.medicine.id)}
-                        className="text-gray-400 hover:text-red-600 text-[11px] font-mono mt-0.5 transition-colors inline-flex items-center gap-1"
+                        aria-label={`Remove ${item.medicine.name} from cart`}
+                        className="text-gray-400 hover:text-red-600 text-[11px] font-mono mt-0.5 transition-colors inline-flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded px-1"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3 h-3" aria-hidden="true" />
                         <span>Remove</span>
                       </button>
                     </div>
@@ -200,9 +201,9 @@ export const CartPage: React.FC = () => {
             <div className="flex justify-between items-center pt-2">
               <Link
                 to="/customer/medicines"
-                className="text-xs font-semibold text-gray-600 hover:text-pine-800 flex items-center gap-1.5"
+                className="text-xs font-semibold text-gray-600 hover:text-pine-800 flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded p-1"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Continue shopping medicines</span>
               </Link>
             </div>
@@ -210,32 +211,34 @@ export const CartPage: React.FC = () => {
 
           {/* Right Column: Order Summary & Checkout CTA */}
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-6 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 p-5 sm:p-6 space-y-6 shadow-sm">
               <h3 className="text-base font-bold text-gray-900 font-sans border-b border-sand-200 pb-3">
                 Order Summary
               </h3>
 
               {/* Promo Code Form */}
               <form onSubmit={handleApplyCoupon} className="space-y-2">
-                <label className="block text-xs font-semibold text-gray-700">Promo Code or Coupon:</label>
+                <label htmlFor="cart-coupon-input" className="block text-xs font-semibold text-gray-700">Promo Code or Coupon:</label>
                 <div className="flex gap-2">
                   <input
+                    id="cart-coupon-input"
                     type="text"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="Try MEDBAZAR10"
-                    className="flex-1 px-3 py-2 rounded-xl border border-sand-300 text-xs font-mono uppercase placeholder:font-sans focus:outline-none focus:border-pine-600"
+                    placeholder="e.g. MEDBAZAR10"
+                    aria-label="Enter promo code or coupon"
+                    className="flex-1 px-3 py-2 rounded-lg border border-sand-300 text-xs font-mono uppercase bg-sand-50 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-sand-100 hover:bg-sand-200 text-pine-800 font-semibold text-xs rounded-xl border border-sand-300 transition-colors"
+                    className="px-4 py-2 bg-sand-200 hover:bg-sand-300 text-gray-800 font-semibold text-xs rounded-lg transition-colors font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     Apply
                   </button>
                 </div>
                 {appliedCoupon && (
-                  <p className="text-[11px] text-emerald-700 font-mono flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
+                  <p className="text-[11px] text-emerald-700 font-mono flex items-center gap-1 mt-2">
+                    <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
                     <span>Coupon {appliedCoupon} active (₹{couponDiscount.toFixed(2)} off)</span>
                   </p>
                 )}
@@ -282,10 +285,10 @@ export const CartPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/customer/checkout')}
-                className="w-full bg-pine-700 hover:bg-pine-800 text-white font-semibold text-sm py-3.5 px-4 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 shadow-xs"
+                className="w-full bg-pine-700 hover:bg-pine-800 text-white font-semibold text-sm py-3 px-4 rounded-lg transition-colors duration-150 flex items-center justify-center gap-2 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <span>PROCEED TO CHECKOUT</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </button>
 
               {/* Trust Metadata */}

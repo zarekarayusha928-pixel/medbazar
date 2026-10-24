@@ -49,7 +49,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
 
-        <div className="relative rounded-lg shadow-2xs">
+        <div className="relative rounded-lg shadow-sm">
           {leftIcon && (
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
               {leftIcon}
@@ -66,8 +66,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               clsx(
                 'block w-full rounded-lg border text-sm font-sans transition-all duration-150',
                 'bg-white text-gray-900 placeholder:text-gray-400',
-                'hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0',
-                'disabled:bg-gray-50 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed',
+                'hover:border-sand-400 focus:outline-none focus:ring-2 focus:ring-offset-0',
+                'disabled:bg-sand-100 disabled:text-gray-400 disabled:border-sand-200 disabled:cursor-not-allowed',
                 leftIcon ? 'pl-9' : 'pl-3.5',
                 (rightIcon || isLoading || error || hasSuccess) ? 'pr-9' : 'pr-3.5',
                 'py-2',
@@ -75,7 +75,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                   ? 'border-red-400 focus:border-red-500 focus:ring-red-100 text-red-950'
                   : hasSuccess
                   ? 'border-emerald-500 focus:border-emerald-600 focus:ring-emerald-100 text-emerald-950'
-                  : 'border-gray-300 focus:border-brand-500 focus:ring-brand-100',
+                  : 'border-sand-300 focus:border-brand-500 focus:ring-brand-100',
                 className
               )
             )}
@@ -96,7 +96,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         </div>
 
         {error && (
-          <p id={errorId} className="text-xs text-red-600 font-medium flex items-center gap-1 mt-1">
+          <p id={errorId} role="alert" className="text-xs text-red-600 font-medium flex items-center gap-1 mt-1">
             <span>{error}</span>
           </p>
         )}

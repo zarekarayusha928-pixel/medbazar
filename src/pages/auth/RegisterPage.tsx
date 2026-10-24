@@ -87,10 +87,12 @@ export const RegisterPage: React.FC = () => {
     setErrors({});
 
     try {
-      // Simulate frontend-only registration request
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const ok = await register(name.trim(), email.trim(), phone.trim(), password, 'CUSTOMER');
+      if (!ok) {
+        setErrors({ general: 'Registration failed. The email address may already be in use.' });
+        return;
+      }
 
-      await register(name.trim(), email.trim(), phone.trim(), 'CUSTOMER');
       setIsSuccess(true);
       showToast('Registration Complete', 'Your customer account was created successfully!', 'success');
 
@@ -115,10 +117,10 @@ export const RegisterPage: React.FC = () => {
         {/* Brand Header */}
         <Link
           to="/customer"
-          className="inline-flex items-center gap-2.5 group focus:outline-none focus:ring-2 focus:ring-brand-500 rounded-2xl p-1"
+          className="inline-flex items-center gap-2.5 group focus:outline-none focus:ring-2 focus:ring-brand-500 rounded-lg p-1"
           aria-label="Med Bazar Home"
         >
-          <div className="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center font-bold shadow-2xs group-hover:bg-brand-700 transition-colors">
+          <div className="w-12 h-12 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold shadow-sm group-hover:bg-brand-700 transition-colors">
             <Pill className="w-7 h-7" />
           </div>
           <span className="text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -134,12 +136,12 @@ export const RegisterPage: React.FC = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
-        <div className="bg-white border border-sand-300 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6">
+        <div className="bg-white border border-sand-300 rounded-lg p-6 sm:p-8 shadow-sm space-y-6">
           {/* General Error Banner */}
           {errors.general && (
             <div
               role="alert"
-              className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5"
+              className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5"
             >
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errors.general}</span>
@@ -150,7 +152,7 @@ export const RegisterPage: React.FC = () => {
           {isSuccess && (
             <div
               role="status"
-              className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2.5"
+              className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2.5"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="font-semibold">Account created! Redirecting to customer marketplace...</span>
@@ -166,7 +168,7 @@ export const RegisterPage: React.FC = () => {
               >
                 Full Name <span className="text-red-500" aria-hidden="true">*</span>
               </label>
-              <div className="relative rounded-xl shadow-2xs">
+              <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                   <User className="w-4 h-4" />
                 </div>
@@ -184,7 +186,7 @@ export const RegisterPage: React.FC = () => {
                   placeholder="e.g. Rajesh Sharma"
                   aria-invalid={Boolean(errors.name)}
                   aria-describedby={errors.name ? 'name-error' : undefined}
-                  className={`block w-full rounded-xl border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
+                  className={`block w-full rounded-lg border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
                     errors.name
                       ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-red-950 bg-red-50/20'
                       : 'border-sand-300 hover:border-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
@@ -209,7 +211,7 @@ export const RegisterPage: React.FC = () => {
                 >
                   Email Address <span className="text-red-500" aria-hidden="true">*</span>
                 </label>
-                <div className="relative rounded-xl shadow-2xs">
+                <div className="relative rounded-lg shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                     <Mail className="w-4 h-4" />
                   </div>
@@ -227,7 +229,7 @@ export const RegisterPage: React.FC = () => {
                     placeholder="rajesh@example.com"
                     aria-invalid={Boolean(errors.email)}
                     aria-describedby={errors.email ? 'email-error' : undefined}
-                    className={`block w-full rounded-xl border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
+                    className={`block w-full rounded-lg border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
                       errors.email
                         ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-red-950 bg-red-50/20'
                         : 'border-sand-300 hover:border-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
@@ -250,7 +252,7 @@ export const RegisterPage: React.FC = () => {
                 >
                   Mobile Number <span className="text-red-500" aria-hidden="true">*</span>
                 </label>
-                <div className="relative rounded-xl shadow-2xs">
+                <div className="relative rounded-lg shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                     <Phone className="w-4 h-4" />
                   </div>
@@ -268,7 +270,7 @@ export const RegisterPage: React.FC = () => {
                     placeholder="+91 98765 43210"
                     aria-invalid={Boolean(errors.phone)}
                     aria-describedby={errors.phone ? 'phone-error' : undefined}
-                    className={`block w-full rounded-xl border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
+                    className={`block w-full rounded-lg border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
                       errors.phone
                         ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-red-950 bg-red-50/20'
                         : 'border-sand-300 hover:border-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
@@ -292,7 +294,7 @@ export const RegisterPage: React.FC = () => {
               >
                 Create Password <span className="text-red-500" aria-hidden="true">*</span>
               </label>
-              <div className="relative rounded-xl shadow-2xs">
+              <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                   <Lock className="w-4 h-4" />
                 </div>
@@ -310,7 +312,7 @@ export const RegisterPage: React.FC = () => {
                   placeholder="At least 8 characters"
                   aria-invalid={Boolean(errors.password)}
                   aria-describedby={errors.password ? 'password-error' : undefined}
-                  className={`block w-full rounded-xl border text-xs font-sans pl-10 pr-10 py-2.5 transition-all duration-150 ${
+                  className={`block w-full rounded-lg border text-xs font-sans pl-10 pr-10 py-2.5 transition-all duration-150 ${
                     errors.password
                       ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-red-950 bg-red-50/20'
                       : 'border-sand-300 hover:border-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
@@ -357,7 +359,7 @@ export const RegisterPage: React.FC = () => {
               >
                 Confirm Password <span className="text-red-500" aria-hidden="true">*</span>
               </label>
-              <div className="relative rounded-xl shadow-2xs">
+              <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                   <Lock className="w-4 h-4" />
                 </div>
@@ -375,7 +377,7 @@ export const RegisterPage: React.FC = () => {
                   placeholder="Re-enter your password"
                   aria-invalid={Boolean(errors.confirmPassword)}
                   aria-describedby={errors.confirmPassword ? 'confirm-password-error' : undefined}
-                  className={`block w-full rounded-xl border text-xs font-sans pl-10 pr-10 py-2.5 transition-all duration-150 ${
+                  className={`block w-full rounded-lg border text-xs font-sans pl-10 pr-10 py-2.5 transition-all duration-150 ${
                     errors.confirmPassword
                       ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-red-950 bg-red-50/20'
                       : 'border-sand-300 hover:border-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
@@ -432,7 +434,7 @@ export const RegisterPage: React.FC = () => {
               type="submit"
               disabled={isLoading || isSuccess}
               isLoading={isLoading}
-              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-xl shadow-2xs transition-all duration-150 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 mt-2"
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-150 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 mt-2"
               rightIcon={!isLoading && <ArrowRight className="w-4 h-4" />}
             >
               {isSuccess ? 'Account Created' : 'Create My Account'}

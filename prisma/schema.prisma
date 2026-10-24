@@ -1,0 +1,744 @@
+// Med Bazar — Production Multi-Tenant Pharmacy & Healthcare Prisma Schema
+// Database Engine: PostgreSQL
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  PLATFORM_ADMIN
+  PHARMACY_OWNER
+  BRANCH_MANAGER
+  PHARMACIST
+  CASHIER
+  DELIVERY_STAFF
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DosageForm {
+  TABLET
+  CAPSULE
+  SYRUP
+  INJECTION
+  CREAM
+  DROPS
+  OTHER
+}
+
+enum MedicineStatus {
+  ACTIVE
+  DISCONTINUED
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum MovementType {
+  PURCHASE
+  ONLINE_SALE
+  OFFLINE_SALE
+  RETURN
+  ADJUSTMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+  EXPIRY
+}
+
+enum MovementReferenceType {
+  ORDER
+  POS_SALE
+  PURCHASE_ORDER
+  ADJUSTMENT
+  TRANSFER
+}
+
+enum OrderType {
+  ONLINE
+  PICKUP
+}
+
+enum OrderStatus {
+  PENDING
+  PRESCRIPTION_REVIEW
+  CONFIRMED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  ONLINE
+  COD
+  UPI
+  CASH
+  CARD
+}
+
+enum PrescriptionStatus {
+  UPLOADED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  NEEDS_INFORMATION
+}
+
+enum DeliveryStatus {
+  ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED
+}
+
+enum PurchaseStatus {
+  PENDING
+  RECEIVED
+  CANCELLED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ALERT
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
+
+// ==========================================
+// CORE TENANT & USER MODELS
+// ==========================================
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  phone        String?
+  passwordHash String?
+  role         UserRole   @default(CUSTOMER)
+  status       UserStatus @default(ACTIVE)
+  avatarUrl    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Tenant / Organization memberships
+  organizationMembers OrganizationMember[]
+
+  // Customer Profile & records
+  customerProfile CustomerProfile?
+  orders          Order[]          @relation("CustomerOrders")
+  prescriptions   Prescription[]   @relation("CustomerPrescriptions")
+
+  // Operational responsibilities
+  reviewedPrescriptions Prescription[]  @relation("PharmacistReviews")
+  createdSales          POSSale[]       @relation("CashierSales")
+  assignedDeliveries    Delivery[]      @relation("RiderDeliveries")
+  createdMovements      StockMovement[] @relation("UserStockMovements")
+  notifications         Notification[]
+  auditLogs             AuditLog[]
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model Organization {
+  id            String             @id @default(cuid())
+  name          String
+  legalName     String
+  licenseNumber String             @unique
+  gstNumber     String?
+  phone         String
+  email         String
+  ownerName     String?
+  ownerEmail    String?
+  ownerPhone    String?
+  address       String?
+  city          String?
+  state         String?
+  pincode       String?
+  status        OrganizationStatus @default(ACTIVE)
+  logoUrl       String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  // Relations
+  branches       Branch[]
+  members        OrganizationMember[]
+  inventory      Inventory[]
+  orders         Order[]
+  posSales       POSSale[]
+  prescriptions  Prescription[]
+  suppliers      Supplier[]
+  purchaseOrders PurchaseOrder[]
+  stockMovements StockMovement[]
+  activities     PharmacyActivity[]
+  auditLogs      AuditLog[]
+
+  @@index([status])
+  @@index([city, state])
+  @@map("organizations")
+}
+
+model Branch {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  address        String
+  city           String
+  state          String
+  pincode        String
+  phone          String
+  status         BranchStatus @default(ACTIVE)
+  operatingHours String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        OrganizationMember[]
+  inventory      Inventory[]
+  orders         Order[]
+  posSales       POSSale[]
+  deliveries     Delivery[]
+  purchaseOrders PurchaseOrder[]
+  stockMovements StockMovement[]
+  auditLogs      AuditLog[]
+
+  @@index([organizationId])
+  @@index([city])
+  @@index([status])
+  @@map("branches")
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  branchId       String?
+  role           UserRole
+  status         MemberStatus @default(ACTIVE)
+  joinedAt       DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([branchId])
+  @@index([role])
+  @@map("organization_members")
+}
+
+// ==========================================
+// MEDICINE & INVENTORY MODELS
+// ==========================================
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  medicines Medicine[]
+
+  @@map("categories")
+}
+
+model Medicine {
+  id                   String         @id @default(cuid())
+  name                 String
+  genericName          String
+  brand                String
+  composition          String
+  dosageForm           DosageForm     @default(TABLET)
+  strength             String
+  categoryId           String
+  prescriptionRequired Boolean        @default(false)
+  barcode              String?        @unique
+  manufacturer         String
+  imageUrl             String?
+  status               MedicineStatus @default(ACTIVE)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  // Reverse links
+  inventoryItems     Inventory[]
+  orderItems         OrderItem[]
+  posSaleItems       POSSaleItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+
+  @@index([name])
+  @@index([genericName])
+  @@index([brand])
+  @@index([categoryId])
+  @@index([prescriptionRequired])
+  @@map("medicines")
+}
+
+model Inventory {
+  id             String      @id @default(cuid())
+  organizationId String
+  branchId       String
+  medicineId     String
+  quantity       Int         @default(0)
+  reorderLevel   Int         @default(10)
+  sellingPrice   Decimal     @db.Decimal(10, 2)
+  mrp            Decimal     @db.Decimal(10, 2)
+  status         StockStatus @default(IN_STOCK)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Enforce single branch inventory rule: exactly one inventory record per branch + medicine
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  medicine     Medicine     @relation(fields: [medicineId], references: [id], onDelete: Restrict)
+
+  batches        InventoryBatch[]
+  stockMovements StockMovement[]
+
+  @@unique([branchId, medicineId])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([medicineId])
+  @@index([status])
+  @@map("inventory")
+}
+
+model InventoryBatch {
+  id            String   @id @default(cuid())
+  inventoryId   String
+  batchNumber   String
+  expiryDate    DateTime
+  quantity      Int      @default(0)
+  purchasePrice Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId])
+  @@index([batchNumber])
+  @@index([expiryDate])
+  @@map("inventory_batches")
+}
+
+model StockMovement {
+  id             String                 @id @default(cuid())
+  organizationId String
+  branchId       String
+  inventoryId    String
+  movementType   MovementType
+  quantity       Int // signed value: positive for additions, negative for sales/decrements
+  referenceType  MovementReferenceType?
+  referenceId    String?
+  notes          String?
+  createdById    String
+  createdAt      DateTime               @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  inventory    Inventory    @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("UserStockMovements", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([inventoryId])
+  @@index([movementType])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ==========================================
+// CUSTOMER & ADDRESS MODELS
+// ==========================================
+
+model CustomerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addresses CustomerAddress[]
+
+  @@map("customer_profiles")
+}
+
+model CustomerAddress {
+  id                String      @id @default(cuid())
+  customerProfileId String
+  type              AddressType @default(HOME)
+  addressLine       String
+  city              String
+  state             String
+  pincode           String
+  isDefault         Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([customerProfileId])
+  @@map("customer_addresses")
+}
+
+// ==========================================
+// SUPPLIER & PROCUREMENT MODELS
+// ==========================================
+
+model Supplier {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  contactPerson  String?
+  phone          String
+  email          String?
+  address        String?
+  gstNumber      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  purchaseOrders PurchaseOrder[]
+
+  @@index([organizationId])
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id             String         @id @default(cuid())
+  purchaseNumber String         @unique
+  organizationId String
+  branchId       String
+  supplierId     String?
+  supplierName   String
+  total          Decimal        @db.Decimal(10, 2)
+  status         PurchaseStatus @default(PENDING)
+  purchaseDate   DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier     Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  items        PurchaseOrderItem[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  medicineId      String
+  batchNumber     String
+  expiryDate      DateTime
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(10, 2)
+  total           Decimal  @db.Decimal(10, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  medicine      Medicine      @relation(fields: [medicineId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([medicineId])
+  @@map("purchase_order_items")
+}
+
+// ==========================================
+// ORDER, PRESCRIPTION & PAYMENT MODELS
+// ==========================================
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  organizationId  String
+  branchId        String
+  customerId      String
+  orderType       OrderType     @default(ONLINE)
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   PaymentMethod @default(ONLINE)
+  subtotal        Decimal       @db.Decimal(10, 2)
+  discount        Decimal       @default(0) @db.Decimal(10, 2)
+  deliveryFee     Decimal       @default(0) @db.Decimal(10, 2)
+  total           Decimal       @db.Decimal(10, 2)
+  deliveryAddress String?
+  prescriptionId  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  customer     User          @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
+  prescription Prescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
+
+  items    OrderItem[]
+  payment  Payment?
+  delivery Delivery?
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                   String   @id @default(cuid())
+  orderId              String
+  medicineId           String
+  medicineName         String // Historical snapshot preserves item name at transaction time
+  quantity             Int
+  unitPrice            Decimal  @db.Decimal(10, 2) // Historical snapshot preserves price at transaction time
+  total                Decimal  @db.Decimal(10, 2)
+  prescriptionRequired Boolean  @default(false)
+  createdAt            DateTime @default(now())
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  medicine Medicine @relation(fields: [medicineId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([medicineId])
+  @@map("order_items")
+}
+
+model Prescription {
+  id             String             @id @default(cuid())
+  organizationId String
+  customerId     String
+  doctorName     String?
+  fileUrl        String
+  fileName       String
+  fileType       String             @default("PDF")
+  status         PrescriptionStatus @default(PENDING_REVIEW)
+  notes          String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     User         @relation("CustomerPrescriptions", fields: [customerId], references: [id], onDelete: Restrict)
+  reviewedBy   User?        @relation("PharmacistReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
+  orders       Order[]
+
+  @@index([organizationId])
+  @@index([customerId])
+  @@index([status])
+  @@map("prescriptions")
+}
+
+// ==========================================
+// POINT OF SALE (POS) MODELS
+// ==========================================
+
+model POSSale {
+  id             String        @id @default(cuid())
+  organizationId String
+  branchId       String
+  receiptNumber  String        @unique
+  customerName   String?
+  customerPhone  String?
+  subtotal       Decimal       @db.Decimal(10, 2)
+  discount       Decimal       @default(0) @db.Decimal(10, 2)
+  total          Decimal       @db.Decimal(10, 2)
+  paymentMethod  PaymentMethod @default(CASH)
+  createdById    String
+  createdAt      DateTime      @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdBy    User          @relation("CashierSales", fields: [createdById], references: [id], onDelete: Restrict)
+  items        POSSaleItem[]
+  payment      Payment?
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@map("pos_sales")
+}
+
+model POSSaleItem {
+  id           String   @id @default(cuid())
+  posSaleId    String
+  medicineId   String
+  medicineName String // Historical snapshot
+  batchNumber  String? // Traceability of batch used
+  quantity     Int
+  unitPrice    Decimal  @db.Decimal(10, 2) // Historical snapshot
+  total        Decimal  @db.Decimal(10, 2)
+  createdAt    DateTime @default(now())
+
+  posSale  POSSale  @relation(fields: [posSaleId], references: [id], onDelete: Cascade)
+  medicine Medicine @relation(fields: [medicineId], references: [id], onDelete: Restrict)
+
+  @@index([posSaleId])
+  @@index([medicineId])
+  @@map("pos_sale_items")
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String?       @unique
+  posSaleId      String?       @unique
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("INR")
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  transactionRef String?
+  gatewayName    String?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  posSale POSSale? @relation(fields: [posSaleId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([method])
+  @@map("payments")
+}
+
+// ==========================================
+// LOGISTICS & DELIVERY MODELS
+// ==========================================
+
+model Delivery {
+  id              String         @id @default(cuid())
+  orderId         String         @unique
+  branchId        String
+  deliveryStaffId String?
+  deliveryAddress String
+  status          DeliveryStatus @default(ASSIGNED)
+  assignedTime    DateTime       @default(now())
+  completedTime   DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  order         Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  branch        Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  deliveryStaff User?  @relation("RiderDeliveries", fields: [deliveryStaffId], references: [id], onDelete: SetNull)
+
+  @@index([branchId])
+  @@index([deliveryStaffId])
+  @@index([status])
+  @@map("deliveries")
+}
+
+// ==========================================
+// NOTIFICATIONS & AUDIT LOGS
+// ==========================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  read      Boolean          @default(false)
+  linkUrl   String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String?
+  branchId       String?
+  userId         String?
+  action         String
+  entityType     String
+  entityId       String?
+  details        Json?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model PharmacyActivity {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String
+  title          String
+  description    String
+  actor          String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("pharmacy_activities")
+}

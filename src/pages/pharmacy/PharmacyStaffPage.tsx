@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserCog, Plus, Search, CheckCircle, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { MOCK_STAFF, MOCK_BRANCHES } from '@/services/api/mockData';
+import { userApi } from '@/services/api/userApi';
 import { Staff, UserRole } from '@/types';
 
 export const PharmacyStaffPage: React.FC = () => {
@@ -11,6 +12,15 @@ export const PharmacyStaffPage: React.FC = () => {
   const [staffList, setStaffList] = useState<Staff[]>(MOCK_STAFF);
   const [search, setSearch] = useState('');
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+
+  useEffect(() => {
+    userApi
+      .getStaffMembers('pharm_1')
+      .then((data) => {
+        if (data && data.length > 0) setStaffList(data);
+      })
+      .catch(() => {});
+  }, []);
 
   // Invite form
   const [name, setName] = useState('');
@@ -29,16 +39,25 @@ export const PharmacyStaffPage: React.FC = () => {
     s.role.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string) => {
+    const target = staffList.find(s => s.id === id);
+    const nextStatus = target?.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      if (target?.userId) {
+        await userApi.updateUserStatus(target.userId, nextStatus);
+      }
+    } catch (_err) {
+      // optimistic fallback
+    }
     setStaffList(staffList.map(s =>
       s.id === id
-        ? { ...s, status: s.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
+        ? { ...s, status: nextStatus }
         : s
     ));
     showToast('Staff Status Toggled', 'User branch authorization updated.', 'info');
   };
 
-  const handleInviteSubmit = (e: React.FormEvent) => {
+  const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
@@ -57,6 +76,12 @@ export const PharmacyStaffPage: React.FC = () => {
       joinedAt: new Date().toISOString().split('T')[0]
     };
 
+    try {
+      await userApi.createStaff(newMember);
+    } catch (_err) {
+      // optimistic fallback
+    }
+
     setStaffList([...staffList, newMember]);
     showToast('Staff Member Invited', `Invitation dispatched to ${email}.`, 'success');
     setIsInviteOpen(false);
@@ -65,8 +90,15 @@ export const PharmacyStaffPage: React.FC = () => {
     setPhone('');
   };
 
-  const handleSaveRole = () => {
+  const handleSaveRole = async () => {
     if (!editingStaff) return;
+    try {
+      if (editingStaff.userId) {
+        await userApi.updateUserRole(editingStaff.userId, editRole);
+      }
+    } catch (_err) {
+      // optimistic fallback
+    }
     setStaffList(staffList.map(s =>
       s.id === editingStaff.id
         ? { ...s, role: editRole }
@@ -97,7 +129,7 @@ export const PharmacyStaffPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsInviteOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-2xs"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Invite Staff Member</span>
@@ -105,21 +137,22 @@ export const PharmacyStaffPage: React.FC = () => {
       </div>
 
       {/* Filter toolbar */}
-      <div className="bg-white border border-sand-300 rounded-md p-3 shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md p-3 shadow-sm">
         <div className="relative max-w-sm">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" aria-hidden="true" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search staff name, email, role..."
-            className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+            aria-label="Search staff members by name, email, or role"
+            className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-pine-600"
           />
         </div>
       </div>
 
       {/* Table: Name, Role, Branch, Status, Actions */}
-      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>

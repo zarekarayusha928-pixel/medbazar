@@ -61,11 +61,11 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
         </>
       }
     >
-      <div className="flex items-start gap-4">
-        <div className="rounded-full bg-gray-100 p-2">{icons[variant]}</div>
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div className="rounded-full bg-sand-100 border border-sand-200 p-2 shrink-0">{icons[variant]}</div>
         <div>
-          <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-          <p className="mt-1 text-sm text-gray-500 leading-relaxed">{message}</p>
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900">{title}</h3>
+          <p className="mt-1 text-xs sm:text-sm text-gray-600 leading-relaxed">{message}</p>
         </div>
       </div>
     </Modal>

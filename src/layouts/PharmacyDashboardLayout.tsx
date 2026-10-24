@@ -26,6 +26,7 @@ import {
 import { MOCK_PHARMACIES, MOCK_BRANCHES } from '@/services/api/mockData';
 import { clsx } from 'clsx';
 import { Badge } from '@/components/ui/Badge';
+import { MockModeToggle } from '@/components/ui/MockModeToggle';
 
 export const PharmacyDashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -61,6 +62,14 @@ export const PharmacyDashboardLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-sand-50 text-gray-900 font-sans antialiased">
+      {/* Accessible skip link */}
+      <a
+        href="#pharmacy-main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-pine-700 focus:text-white focus:rounded-lg focus:shadow-sm font-semibold text-xs focus:outline-none"
+      >
+        Skip to dispensary console
+      </a>
+
       {/* Sidebar - Desktop */}
       <aside
         className={clsx(
@@ -71,7 +80,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
         {/* Header with Med Bazar Brand */}
         <div className="h-16 px-4 flex items-center justify-between border-b border-slate-900 shrink-0">
           <Link to="/pharmacy" className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-md bg-pine-700 text-white flex items-center justify-center font-bold shrink-0 shadow-2xs">
+            <div className="w-9 h-9 rounded-md bg-pine-700 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
               <Pill className="w-5 h-5" />
             </div>
             {!sidebarCollapsed && (
@@ -89,7 +98,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-900 transition-colors duration-150"
+            className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-900 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-pine-500"
           >
             <ChevronLeft
               className={clsx('w-5 h-5 transition-transform duration-150', sidebarCollapsed && 'rotate-180')}
@@ -109,7 +118,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
                 className={clsx(
                   'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-colors duration-150 relative group',
                   isActive
-                    ? 'bg-pine-700 text-white font-semibold shadow-2xs'
+                    ? 'bg-pine-700 text-white font-semibold shadow-sm'
                     : item.highlight
                     ? 'bg-slate-900 text-emerald-400 hover:bg-slate-850 hover:text-white'
                     : 'text-slate-300 hover:bg-slate-900 hover:text-white'
@@ -164,7 +173,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
         )}
       >
         {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-sand-300 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20 shadow-2xs">
+        <header className="h-16 bg-white border-b border-sand-300 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20 shadow-sm">
           <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setMobileSidebarOpen(true)}
@@ -206,9 +215,9 @@ export const PharmacyDashboardLayout: React.FC = () => {
             </div>
 
             {/* Branch Selector */}
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1 text-xs">
-              <Building2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-              <label htmlFor="branch-selector" className="text-[10px] text-gray-400 font-mono uppercase font-semibold">
+            <div className="flex items-center gap-1.5 bg-sand-50 border border-sand-300 rounded px-2.5 py-1 text-xs">
+              <Building2 className="w-3.5 h-3.5 text-pine-700 shrink-0" aria-hidden="true" />
+              <label htmlFor="branch-selector" className="text-[10px] text-gray-500 font-mono uppercase font-semibold">
                 Branch:
               </label>
               <select
@@ -232,12 +241,14 @@ export const PharmacyDashboardLayout: React.FC = () => {
 
           {/* Right: Quick POS Counter, Notifications, Profile */}
           <div className="flex items-center gap-3">
+            <MockModeToggle />
+
             {/* Quick POS Launcher Button */}
             <button
               onClick={() => navigate('/pharmacy/pos')}
-              className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-2xs transition-colors duration-150"
+              className="bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
-              <Calculator className="w-3.5 h-3.5" />
+              <Calculator className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Launch POS Counter</span>
               <span className="sm:hidden">POS</span>
             </button>
@@ -247,7 +258,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 aria-label="View notifications"
-                className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors duration-150 border border-gray-200"
+                className="relative p-2 rounded-lg text-gray-600 hover:bg-sand-100 transition-colors duration-150 border border-sand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <Bell className="w-4 h-4" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
@@ -255,14 +266,14 @@ export const PharmacyDashboardLayout: React.FC = () => {
 
               {notificationsOpen && (
                 <>
-                  <div className="fixed inset-0 z-20" onClick={() => setNotificationsOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-80 rounded-xl bg-white border border-gray-200 shadow-xl py-2 z-30 text-xs">
-                    <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+                  <div className="fixed inset-0 z-20" onClick={() => setNotificationsOpen(false)} aria-hidden="true" />
+                  <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm rounded-lg bg-white border border-sand-300 shadow-md py-2 z-30 text-xs">
+                    <div className="px-4 py-2 border-b border-sand-200 flex items-center justify-between">
                       <span className="font-bold text-gray-900">Branch Notifications</span>
                       <span className="font-mono text-[10px] text-teal-600 font-semibold">2 New</span>
                     </div>
-                    <div className="divide-y divide-gray-50">
-                      <div className="p-3 hover:bg-gray-50 flex items-start gap-2.5 transition-colors duration-150">
+                    <div className="divide-y divide-sand-100">
+                      <div className="p-3 hover:bg-sand-50/50 flex items-start gap-2.5 transition-colors duration-150">
                         <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-semibold text-gray-900">Low Stock Alert: Augmentin 625mg</p>
@@ -270,7 +281,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
                           <span className="font-mono text-[10px] text-gray-400">12 mins ago</span>
                         </div>
                       </div>
-                      <div className="p-3 hover:bg-gray-50 flex items-start gap-2.5 transition-colors duration-150">
+                      <div className="p-3 hover:bg-sand-50/50 flex items-start gap-2.5 transition-colors duration-150">
                         <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-semibold text-gray-900">New Online Order #MB-2026-8801</p>
@@ -288,7 +299,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
             <div className="relative">
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors duration-150 text-left"
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-sand-100 transition-colors duration-150 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <div className="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs font-mono">
                   SM
@@ -301,27 +312,27 @@ export const PharmacyDashboardLayout: React.FC = () => {
 
               {profileMenuOpen && (
                 <>
-                  <div className="fixed inset-0 z-20" onClick={() => setProfileMenuOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-30 text-xs">
-                    <div className="px-3 py-2 border-b border-gray-100">
+                  <div className="fixed inset-0 z-20" onClick={() => setProfileMenuOpen(false)} aria-hidden="true" />
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg bg-white border border-sand-300 shadow-md py-1 z-30 text-xs">
+                    <div className="px-3 py-2 border-b border-sand-200">
                       <p className="font-semibold text-gray-900">Dr. Suresh Mehta</p>
                       <p className="text-[11px] text-gray-500">Apothecary Healthcare</p>
                     </div>
                     <Link
                       to="/pharmacy/settings"
                       onClick={() => setProfileMenuOpen(false)}
-                      className="block px-3 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                      className="block px-3 py-2 text-gray-700 hover:bg-sand-50 transition-colors duration-150"
                     >
                       Store Settings
                     </Link>
                     <Link
                       to="/customer"
                       onClick={() => setProfileMenuOpen(false)}
-                      className="block px-3 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                      className="block px-3 py-2 text-gray-700 hover:bg-sand-50 transition-colors duration-150"
                     >
                       Switch to Customer Store
                     </Link>
-                    <div className="border-t border-gray-100 pt-1">
+                    <div className="border-t border-sand-200 pt-1">
                       <Link
                         to="/login"
                         onClick={() => setProfileMenuOpen(false)}
@@ -338,7 +349,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-7 max-w-7xl w-full mx-auto">
+        <main id="pharmacy-main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-7 max-w-7xl w-full mx-auto focus:outline-none">
           <Outlet />
         </main>
       </div>
@@ -347,7 +358,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
       {mobileSidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-2xs transition-opacity duration-150"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-150"
             onClick={() => setMobileSidebarOpen(false)}
           />
           <div className="relative w-64 bg-slate-950 text-slate-300 flex flex-col z-10 border-r border-slate-900">
@@ -374,7 +385,7 @@ export const PharmacyDashboardLayout: React.FC = () => {
                     onClick={() => setMobileSidebarOpen(false)}
                     className={clsx(
                       'flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors duration-150',
-                      isActive ? 'bg-teal-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-900'
+                      isActive ? 'bg-pine-700 text-white font-semibold' : 'text-slate-300 hover:bg-slate-900'
                     )}
                   >
                     <Icon className="w-4 h-4" />

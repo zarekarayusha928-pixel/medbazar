@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types';
+import { authApi } from '@/services/api/authApi';
 
 export const DEMO_USERS: Record<UserRole, User> = {
   CUSTOMER: {
@@ -72,7 +73,7 @@ interface AuthContextType {
   role: UserRole;
   isAuthenticated: boolean;
   login: (email: string, password?: string, role?: UserRole) => Promise<boolean>;
-  register: (name: string, email: string, phone: string, role?: UserRole) => Promise<boolean>;
+  register: (name: string, email: string, phone: string, password?: string, role?: UserRole) => Promise<boolean>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
   demoLogin: (role: UserRole) => void;
@@ -99,43 +100,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('medbazar_role', role);
   }, [role]);
 
-  const login = async (email: string, _password?: string, preferredRole?: UserRole): Promise<boolean> => {
-    const targetRole = preferredRole || role;
-    setRole(targetRole);
-    const targetUser = DEMO_USERS[targetRole] || {
-      id: `usr_${Date.now()}`,
-      name: email.split('@')[0],
-      email,
-      phone: '+91 98765 00000',
-      role: targetRole,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
+  // Global centralized listener for 401 Unauthorized responses dispatched by HttpClient
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setIsAuthenticated(false);
+      localStorage.removeItem('medbazar_auth');
     };
-    setUser(targetUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('medbazar_auth', 'true');
-    return true;
+    window.addEventListener('medbazar:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('medbazar:unauthorized', handleUnauthorized);
+  }, []);
+
+  const login = async (email: string, password?: string, preferredRole?: UserRole): Promise<boolean> => {
+    try {
+      const targetRole = preferredRole || role;
+      const res = await authApi.login({ email, password, role: targetRole });
+      setRole(res.user.role);
+      setUser(res.user);
+      setIsAuthenticated(true);
+      localStorage.setItem('medbazar_auth', 'true');
+      return true;
+    } catch {
+      return false;
+    }
   };
 
-  const register = async (name: string, email: string, phone: string, preferredRole?: UserRole): Promise<boolean> => {
-    const targetRole = preferredRole || 'CUSTOMER';
-    const newUser: User = {
-      id: `usr_${Date.now()}`,
-      name,
-      email,
-      phone,
-      role: targetRole,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-    };
-    setRole(targetRole);
-    setUser(newUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('medbazar_auth', 'true');
-    return true;
+  const register = async (name: string, email: string, phone: string, password?: string, preferredRole?: UserRole): Promise<boolean> => {
+    try {
+      const targetRole = preferredRole || 'CUSTOMER';
+      const res = await authApi.register({ name, email, phone, password, role: targetRole });
+      setRole(res.user.role);
+      setUser(res.user);
+      setIsAuthenticated(true);
+      localStorage.setItem('medbazar_auth', 'true');
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const logout = () => {
+    authApi.logout().catch(() => {});
     setIsAuthenticated(false);
     localStorage.removeItem('medbazar_auth');
   };

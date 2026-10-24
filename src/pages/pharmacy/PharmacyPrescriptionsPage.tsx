@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileCheck, Check, X, Eye, HelpCircle, FileText, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { MOCK_PRESCRIPTIONS } from '@/services/api/mockData';
+import { prescriptionApi } from '@/services/api/prescriptionApi';
 import { Prescription } from '@/types';
 
 export const PharmacyPrescriptionsPage: React.FC = () => {
   const { showToast } = useToast();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>(MOCK_PRESCRIPTIONS);
+
+  useEffect(() => {
+    prescriptionApi
+      .getPrescriptions()
+      .then((data) => {
+        if (data && data.length > 0) setPrescriptions(data);
+      })
+      .catch(() => {});
+  }, []);
 
   // Modal states
   const [viewingRx, setViewingRx] = useState<Prescription | null>(null);
@@ -23,7 +33,17 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
   };
 
   // Action: APPROVE
-  const handleApprove = (rx: Prescription) => {
+  const handleApprove = async (rx: Prescription) => {
+    try {
+      await prescriptionApi.updatePrescriptionStatus(
+        rx.id,
+        'APPROVED',
+        'Verified by registered pharmacist',
+        'Amit Deshmukh (Reg. Pharmacist #MH-44091)'
+      );
+    } catch (_err) {
+      // Allow optimistic fallback
+    }
     const updated = prescriptions.map(p =>
       p.id === rx.id
         ? {
@@ -40,8 +60,18 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
   };
 
   // Action: REJECT
-  const handleRejectConfirm = () => {
+  const handleRejectConfirm = async () => {
     if (!rejectingRx) return;
+    try {
+      await prescriptionApi.updatePrescriptionStatus(
+        rejectingRx.id,
+        'REJECTED',
+        `Rejected by pharmacist: ${rejectReason}`,
+        'Amit Deshmukh (Reg. Pharmacist #MH-44091)'
+      );
+    } catch (_err) {
+      // Allow optimistic fallback
+    }
     const updated = prescriptions.map(p =>
       p.id === rejectingRx.id
         ? {
@@ -60,8 +90,18 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
   };
 
   // Action: REQUEST INFORMATION
-  const handleRequestInfoConfirm = () => {
+  const handleRequestInfoConfirm = async () => {
     if (!requestInfoRx) return;
+    try {
+      await prescriptionApi.updatePrescriptionStatus(
+        requestInfoRx.id,
+        'NEEDS_INFORMATION',
+        `Requested information: ${infoRequestText}`,
+        'Amit Deshmukh (Reg. Pharmacist)'
+      );
+    } catch (_err) {
+      // Allow optimistic fallback
+    }
     const updated = prescriptions.map(p =>
       p.id === requestInfoRx.id
         ? {
@@ -99,7 +139,7 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
       </div>
 
       {/* Prescription Queue Table - Compact, Hairline Borders, Mono Numerals */}
-      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -164,7 +204,7 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleApprove(rx)}
-                            className="px-2 py-1 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-[11px] transition-colors shadow-2xs"
+                            className="px-2 py-1 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-[11px] transition-colors shadow-sm"
                           >
                             APPROVE
                           </button>
@@ -300,11 +340,12 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
               Please specify the clinical reason for rejecting prescription for <span className="font-bold">{rejectingRx.customerName}</span>:
             </p>
             <div>
-              <label className="block text-gray-700 font-semibold mb-1">Reason for Rejection</label>
+              <label htmlFor="rx-reject-reason" className="block text-gray-700 font-semibold mb-1">Reason for Rejection</label>
               <select
+                id="rx-reject-reason"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="w-full p-2 border border-sand-300 rounded bg-white text-xs text-gray-900 focus:outline-none focus:border-pine-700"
+                className="w-full p-2 border border-sand-300 rounded bg-white text-xs text-gray-900 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-pine-600"
               >
                 <option value="Prescription date exceeds 6 months validity">Prescription date exceeds 6 months validity</option>
                 <option value="Doctor medical council registration number missing">Doctor medical council registration number missing</option>
@@ -329,14 +370,14 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setRequestInfoRx(null)}
-                className="px-3 py-1.5 rounded border border-sand-300 bg-white text-xs text-gray-700 font-semibold"
+                className="px-3 py-1.5 rounded border border-sand-300 bg-white text-xs text-gray-700 font-semibold hover:bg-sand-100 focus-visible:ring-2 focus-visible:ring-pine-600"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleRequestInfoConfirm}
-                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold"
+                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold focus-visible:ring-2 focus-visible:ring-pine-600"
               >
                 Send Request
               </button>
@@ -348,12 +389,13 @@ export const PharmacyPrescriptionsPage: React.FC = () => {
               An SMS and in-app message will be sent to the customer requesting the clarification below:
             </p>
             <div>
-              <label className="block text-gray-700 font-semibold mb-1">Message to Patient</label>
+              <label htmlFor="rx-info-text" className="block text-gray-700 font-semibold mb-1">Message to Patient</label>
               <textarea
+                id="rx-info-text"
                 rows={3}
                 value={infoRequestText}
                 onChange={(e) => setInfoRequestText(e.target.value)}
-                className="w-full p-2 border border-sand-300 rounded bg-white text-xs text-gray-900 focus:outline-none focus:border-pine-700"
+                className="w-full p-2 border border-sand-300 rounded bg-white text-xs text-gray-900 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-pine-600"
               />
             </div>
           </div>

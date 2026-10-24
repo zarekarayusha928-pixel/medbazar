@@ -1,13 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, ChevronRight, Search, Clock, ArrowRight, Store, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
-import { MOCK_ORDERS } from '@/services/api/mockData';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { orderApi } from '@/services/api/orderApi';
+import { Order } from '@/types';
 
 export const OrderListPage: React.FC = () => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    orderApi
+      .getOrders()
+      .then((data) => {
+        setOrders(data);
+      })
+      .catch((err) => {
+        setError(err?.message || 'Failed to fetch your orders.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -32,7 +54,7 @@ export const OrderListPage: React.FC = () => {
     }
   };
 
-  const filteredOrders = MOCK_ORDERS.filter((order) => {
+  const filteredOrders = orders.filter((order) => {
     if (statusFilter !== 'ALL' && order.status !== statusFilter) {
       return false;
     }
@@ -41,6 +63,7 @@ export const OrderListPage: React.FC = () => {
       return (
         order.orderNumber.toLowerCase().includes(q) ||
         (order.branchName?.toLowerCase().includes(q) ?? false) ||
+        ((order as any).branch?.name?.toLowerCase().includes(q) ?? false) ||
         order.items.some(i => i.medicineName.toLowerCase().includes(q))
       );
     }
@@ -61,31 +84,35 @@ export const OrderListPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="font-mono text-xs text-gray-500 bg-sand-100 px-3.5 py-1.5 rounded-xl border border-sand-300">
-          Total: {MOCK_ORDERS.length} Orders
+        <div className="font-mono text-xs text-gray-500 bg-sand-100 px-3.5 py-1.5 rounded-lg border border-sand-300">
+          Total: {orders.length} Orders
         </div>
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-sand-300 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+      <div className="bg-white p-3 sm:p-4 rounded-lg border border-sand-300 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
         <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" aria-hidden="true" />
+          <label htmlFor="orders-search" className="sr-only">Search orders</label>
           <input
+            id="orders-search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by order # or medicine..."
-            className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-sand-300 text-xs text-gray-900 focus:outline-none focus:border-pine-600 font-sans"
+            aria-label="Search by order number or medicine"
+            className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-sand-300 text-xs text-gray-900 focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500 font-sans"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none font-sans">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none font-sans" role="group" aria-label="Order status filter">
           <span className="text-gray-500 font-medium">Status:</span>
           {['ALL', 'PRESCRIPTION_REVIEW', 'CONFIRMED', 'DELIVERED'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              aria-pressed={statusFilter === st}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 statusFilter === st
                   ? 'bg-pine-700 text-white'
                   : 'bg-sand-100 text-gray-700 hover:bg-sand-200'
@@ -98,7 +125,7 @@ export const OrderListPage: React.FC = () => {
       </div>
 
       {/* Table Structure for Desktop, Responsive Cards for Mobile */}
-      <div className="hidden md:block bg-white rounded-3xl border border-sand-300 overflow-hidden shadow-2xs">
+      <div className="hidden md:block bg-white rounded-lg border border-sand-300 overflow-x-auto shadow-sm">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-sand-100 text-gray-700 font-mono text-[11px] uppercase tracking-wider border-b border-sand-300">
@@ -178,7 +205,7 @@ export const OrderListPage: React.FC = () => {
                   <td className="py-4 px-5 text-right">
                     <Link
                       to={`/customer/orders/${order.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-pine-800 hover:text-pine-900 bg-sand-100 hover:bg-sand-200 px-3 py-1.5 rounded-xl border border-sand-300 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-pine-800 hover:text-pine-900 bg-sand-100 hover:bg-sand-200 px-3 py-1.5 rounded-lg border border-sand-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       <span>View</span>
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -194,14 +221,14 @@ export const OrderListPage: React.FC = () => {
       {/* Mobile Card View */}
       <div className="md:hidden space-y-4">
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl border border-sand-300 text-gray-500">
+          <div className="text-center py-12 bg-white rounded-lg border border-sand-300 text-gray-500">
             No orders found.
           </div>
         ) : (
           filteredOrders.map((order) => (
             <div
               key={order.id}
-              className="bg-white rounded-2xl border border-sand-300 p-4 space-y-3 shadow-2xs"
+              className="bg-white rounded-lg border border-sand-300 p-4 space-y-3 shadow-sm"
             >
               <div className="flex items-center justify-between border-b border-sand-200 pb-2.5">
                 <div>
@@ -235,7 +262,7 @@ export const OrderListPage: React.FC = () => {
 
                 <Link
                   to={`/customer/orders/${order.id}`}
-                  className="bg-pine-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1"
+                  className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <span>Details</span>
                   <ChevronRight className="w-3.5 h-3.5" />

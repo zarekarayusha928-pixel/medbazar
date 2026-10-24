@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -22,6 +22,8 @@ import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { MOCK_INVENTORY, MOCK_CATEGORIES, MOCK_CUSTOMERS } from '@/services/api/mockData';
 import { Inventory, PosSaleItem, PosSale } from '@/types';
+import { posApi } from '@/services/api/posApi';
+import { inventoryApi } from '@/services/api/inventoryApi';
 
 interface SalesHistoryRecord {
   receipt: string;
@@ -65,6 +67,44 @@ export const PharmacyPosPage: React.FC = () => {
 
   // Receipt & Print Modal
   const [completedReceipt, setCompletedReceipt] = useState<SalesHistoryRecord | null>(null);
+
+  // Load real inventory and history on mount
+  useEffect(() => {
+    let mounted = true;
+    async function loadPosData() {
+      try {
+        const [invData, salesData] = await Promise.all([
+          inventoryApi.getBranchInventory('br_1').catch(() => MOCK_INVENTORY),
+          posApi.getSalesHistory({ branchId: 'br_1' }).catch(() => []),
+        ]);
+        if (mounted) {
+          if (invData && invData.length > 0) setInventoryList(invData);
+          if (salesData && salesData.length > 0) {
+            const mapped: SalesHistoryRecord[] = salesData.map((s) => ({
+              receipt: s.receiptNumber,
+              date: s.createdAt.replace('T', ' ').substring(0, 16),
+              customer: s.customerName || 'Walk-in Customer',
+              items: s.items?.map((i) => `${i.medicineName.split(' ')[0]} (${i.quantity}x)`).join(', ') || 'Medication items',
+              itemsCount: s.items?.reduce((acc, i) => acc + i.quantity, 0) || 1,
+              amount: Number(s.total),
+              payment: s.paymentMethod as any,
+              cashier: (s as any).createdBy?.name || 'Kiran Kulkarni',
+              subtotal: Number(s.subtotal),
+              discount: Number(s.discount),
+              itemsDetail: s.items || [],
+            }));
+            setSalesHistory((prev) => [...mapped, ...prev]);
+          }
+        }
+      } catch (_err) {
+        // Fallback
+      }
+    }
+    loadPosData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // SALES HISTORY
   const [salesHistory, setSalesHistory] = useState<SalesHistoryRecord[]>([
@@ -228,25 +268,39 @@ export const PharmacyPosPage: React.FC = () => {
   };
 
   // COMPLETE SALE
-  const handleCompleteSale = () => {
+  const handleCompleteSale = async () => {
     if (cartItems.length === 0) {
       showToast('Cart is Empty', 'Please select at least one item to complete sale', 'warning');
       return;
     }
 
-    setIsProcessing(true);
+    try {
+      setIsProcessing(true);
+      const customer = getResolvedCustomer();
+      const idempotencyKey = `pos_req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const paymentRef = paymentMethod !== 'CASH' ? `POS-TXN-${Date.now().toString().slice(-6)}` : undefined;
 
-    // Simulate fast offline POS execution
-    setTimeout(() => {
+      const sale = await posApi.processSale({
+        organizationId: 'pharm_1',
+        branchId: 'br_1',
+        items: cartItems,
+        paymentMethod,
+        paymentRef,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        discount,
+        idempotencyKey,
+      });
+
       // 1. Deduct quantity from branch inventoryList
-      const nextInv = inventoryList.map(inv => {
-        const cartMatch = cartItems.find(c => c.medicineId === inv.medicineId);
+      const nextInv = inventoryList.map((inv) => {
+        const cartMatch = cartItems.find((c) => c.medicineId === inv.medicineId);
         if (cartMatch) {
           const nextQty = Math.max(0, inv.quantity - cartMatch.quantity);
           return {
             ...inv,
             quantity: nextQty,
-            status: (nextQty === 0 ? 'OUT_OF_STOCK' : nextQty <= inv.reorderLevel ? 'LOW_STOCK' : 'IN_STOCK') as any
+            status: (nextQty === 0 ? 'OUT_OF_STOCK' : nextQty <= inv.reorderLevel ? 'LOW_STOCK' : 'IN_STOCK') as any,
           };
         }
         return inv;
@@ -254,32 +308,35 @@ export const PharmacyPosPage: React.FC = () => {
       setInventoryList(nextInv);
 
       // 2. Build receipt record
-      const customer = getResolvedCustomer();
-      const newReceiptNumber = `RCP-2026-${1043 + salesHistory.length}`;
-      const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-      const itemsSummary = cartItems.map(i => `${i.medicineName.split(' ')[0]} (${i.quantity}x)`).join(', ');
+      const itemsSummary =
+        sale.items?.map((i) => `${i.medicineName.split(' ')[0]} (${i.quantity}x)`).join(', ') ||
+        cartItems.map((i) => `${i.medicineName.split(' ')[0]} (${i.quantity}x)`).join(', ');
 
       const record: SalesHistoryRecord = {
-        receipt: newReceiptNumber,
-        date: nowStr,
-        customer: customer.name,
+        receipt: sale.receiptNumber,
+        date: sale.createdAt.replace('T', ' ').substring(0, 16),
+        customer: sale.customerName || customer.name,
         items: itemsSummary,
-        itemsCount: cartItems.reduce((s, i) => s + i.quantity, 0),
-        amount: total,
-        payment: paymentMethod,
-        cashier: 'Kiran Kulkarni (Cashier)',
-        itemsDetail: [...cartItems],
-        subtotal,
-        discount
+        itemsCount: sale.items?.reduce((s, i) => s + i.quantity, 0) || cartItems.reduce((s, i) => s + i.quantity, 0),
+        amount: Number(sale.total),
+        payment: sale.paymentMethod as any,
+        cashier: (sale as any).createdBy?.name || 'Kiran Kulkarni (Cashier)',
+        itemsDetail: sale.items || [...cartItems],
+        subtotal: Number(sale.subtotal),
+        discount: Number(sale.discount),
       };
 
-      setSalesHistory([record, ...salesHistory]);
+      setSalesHistory((prev) => [record, ...prev]);
       setCompletedReceipt(record);
-      setIsProcessing(false);
       clearCart();
-      showToast('Sale Completed', `Receipt ${newReceiptNumber} generated. Stock deducted.`, 'success');
-    }, 400);
+      showToast('Sale Completed', `Receipt ${sale.receiptNumber} generated. Stock deducted.`, 'success');
+    } catch (err: any) {
+      showToast('Sale Failed', err.message || 'Could not complete POS sale.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
 
   return (
     <div className="space-y-3 font-sans text-gray-900 antialiased">
@@ -328,7 +385,7 @@ export const PharmacyPosPage: React.FC = () => {
           {/* ----------------------------------------------------------------------- */}
           {/* LEFT: Medicine Search (4 cols) */}
           {/* ----------------------------------------------------------------------- */}
-          <div className="lg:col-span-4 bg-white border border-sand-300 rounded-md p-3 space-y-3 shadow-2xs flex flex-col h-[calc(100vh-175px)]">
+          <div className="lg:col-span-4 bg-white border border-sand-300 rounded-lg p-3 space-y-3 shadow-sm flex flex-col h-auto lg:h-[calc(100vh-175px)]">
             <div className="space-y-2 border-b border-sand-200 pb-2.5">
               <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500 font-bold block">
                 Medicine Catalogue Search
@@ -336,22 +393,28 @@ export const PharmacyPosPage: React.FC = () => {
 
               {/* Unified Search Input (Medicine name, barcode, generic name) */}
               <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" aria-hidden="true" />
+                <label htmlFor="pos-search-input" className="sr-only">Search medicines</label>
                 <input
+                  id="pos-search-input"
                   type="text"
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Name, barcode, generic composition..."
-                  className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+                  aria-label="Search medicines by name, barcode, or generic composition"
+                  className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
                 />
               </div>
 
               {/* Category Filter */}
+              <label htmlFor="pos-category-filter" className="sr-only">Filter by category</label>
               <select
+                id="pos-category-filter"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full px-2 py-1 rounded border border-sand-300 text-xs bg-white text-gray-700 focus:outline-none focus:border-pine-700 font-sans"
+                aria-label="Filter catalogue by category"
+                className="w-full px-2 py-1 rounded border border-sand-300 text-xs bg-white text-gray-700 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500 font-sans"
               >
                 <option value="ALL">All Categories ({MOCK_CATEGORIES.length})</option>
                 {MOCK_CATEGORIES.map(c => (
@@ -427,7 +490,7 @@ export const PharmacyPosPage: React.FC = () => {
           {/* ----------------------------------------------------------------------- */}
           {/* CENTER: Cart / Selected Items (5 cols) */}
           {/* ----------------------------------------------------------------------- */}
-          <div className="lg:col-span-5 bg-white border border-sand-300 rounded-md p-3 space-y-3 shadow-2xs flex flex-col h-[calc(100vh-175px)]">
+          <div className="lg:col-span-5 bg-white border border-sand-300 rounded-lg p-3 space-y-3 shadow-sm flex flex-col h-auto min-h-[320px] lg:h-[calc(100vh-175px)]">
             <div className="flex items-center justify-between border-b border-sand-200 pb-2">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500 font-bold">
@@ -486,17 +549,19 @@ export const PharmacyPosPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => updateQuantity(idx, item.quantity - 1)}
-                              className="px-1.5 py-0.5 text-gray-600 hover:bg-sand-100 font-mono text-[11px]"
+                              aria-label={`Decrease quantity of ${item.medicineName}`}
+                              className="px-1.5 py-0.5 text-gray-600 hover:bg-sand-100 font-mono text-[11px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                             >
                               -
                             </button>
-                            <span className="px-2 font-mono font-bold text-xs text-gray-900">
+                            <span className="px-2 font-mono font-bold text-xs text-gray-900" aria-live="polite">
                               {item.quantity}
                             </span>
                             <button
                               type="button"
                               onClick={() => updateQuantity(idx, item.quantity + 1)}
-                              className="px-1.5 py-0.5 text-gray-600 hover:bg-sand-100 font-mono text-[11px]"
+                              aria-label={`Increase quantity of ${item.medicineName}`}
+                              className="px-1.5 py-0.5 text-gray-600 hover:bg-sand-100 font-mono text-[11px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                             >
                               +
                             </button>
@@ -518,10 +583,11 @@ export const PharmacyPosPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => removeFromCart(idx)}
-                            className="text-gray-400 hover:text-red-600 p-1"
+                            aria-label={`Remove ${item.medicineName} from POS cart`}
+                            className="text-gray-400 hover:text-red-600 p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
                             title="Remove row"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                           </button>
                         </td>
                       </tr>
@@ -543,7 +609,7 @@ export const PharmacyPosPage: React.FC = () => {
           {/* ----------------------------------------------------------------------- */}
           {/* RIGHT: Sale Summary, Customer & Checkout (3 cols) */}
           {/* ----------------------------------------------------------------------- */}
-          <div className="lg:col-span-3 bg-white border border-sand-300 rounded-md p-3.5 space-y-3.5 shadow-2xs flex flex-col h-[calc(100vh-175px)] justify-between">
+          <div className="lg:col-span-3 bg-white border border-sand-300 rounded-lg p-3.5 space-y-3.5 shadow-sm flex flex-col h-auto lg:h-[calc(100vh-175px)] justify-between">
             <div className="space-y-3">
               <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500 font-bold block border-b border-sand-200 pb-1.5">
                 Customer & Checkout
@@ -643,7 +709,7 @@ export const PharmacyPosPage: React.FC = () => {
                         onClick={() => setPaymentMethod(p.id as any)}
                         className={`py-1.5 px-2 rounded text-xs font-semibold flex items-center justify-center gap-1 border transition-colors ${
                           isActive
-                            ? 'bg-pine-700 text-white border-pine-700 shadow-2xs'
+                            ? 'bg-pine-700 text-white border-pine-700 shadow-sm'
                             : 'bg-white hover:bg-sand-100 text-gray-700 border-sand-300'
                         }`}
                       >
@@ -686,7 +752,7 @@ export const PharmacyPosPage: React.FC = () => {
               type="button"
               onClick={handleCompleteSale}
               disabled={isProcessing || cartItems.length === 0}
-              className="w-full py-2.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-2xs disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isProcessing ? 'Processing Sale...' : 'COMPLETE SALE'}
             </button>
@@ -696,7 +762,7 @@ export const PharmacyPosPage: React.FC = () => {
         /* ========================================================================= */
         /* SALES HISTORY VIEW: Receipt, Date, Customer, Items, Amount, Payment, Cashier */
         /* ========================================================================= */
-        <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-lg overflow-hidden shadow-sm">
           <div className="p-3 border-b border-sand-200 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold uppercase font-mono text-gray-900">
@@ -782,7 +848,7 @@ export const PharmacyPosPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-2xs"
+                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print Slip</span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp,
@@ -16,15 +16,33 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { MOCK_ORDERS, MOCK_INVENTORY, MOCK_PRESCRIPTIONS, MOCK_BRANCHES } from '@/services/api/mockData';
+import { reportApi } from '@/services/api/reportApi';
 
 export const PharmacyDashboardPage: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'MONTH'>('TODAY');
+  const [telemetry, setTelemetry] = useState<any>(null);
   const activeBranch = MOCK_BRANCHES[0];
 
-  // Derived counts from isolated mock data
-  const pendingRx = MOCK_PRESCRIPTIONS.filter(p => p.status === 'PENDING_REVIEW');
-  const lowStockItems = MOCK_INVENTORY.filter(i => i.status === 'LOW_STOCK' || i.status === 'OUT_OF_STOCK');
-  const expiringSoonCount = 3; // Batches expiring within 90 days
+  useEffect(() => {
+    reportApi.getDashboardTelemetry({ period: timeRange.toLowerCase() as any })
+      .then((data) => {
+        if (data) setTelemetry(data);
+      })
+      .catch(() => {});
+  }, [timeRange]);
+
+  // Priority action queues and stock items
+  const pendingRx = MOCK_PRESCRIPTIONS.filter((p) => p.status === 'PENDING_REVIEW');
+  const lowStockItems = MOCK_INVENTORY.filter((i) => i.status === 'LOW_STOCK' || i.status === 'OUT_OF_STOCK');
+
+  // Derived counts from telemetry or isolated mock data
+  const pendingRxCount = telemetry?.pendingPrescriptionsCount ?? pendingRx.length;
+  const lowStockCount = telemetry?.lowStockCount ?? lowStockItems.length;
+  const expiringSoonCount = telemetry?.expiringBatchesCount ?? 3; // Batches expiring within 90 days
+  const todayTotalSales = telemetry?.sales?.todayTotal ?? 18450;
+  const todayOnlineSales = telemetry?.sales?.todayOnline ?? 5820;
+  const todayOfflineSales = telemetry?.sales?.todayOffline ?? 12630;
+  const totalOrdersCount = telemetry?.sales?.totalOrders ?? 24;
 
   // Hourly sales points for the restrained pine line chart (no gridlines, single highlighted peak)
   // X: 09:00, 11:00, 13:00, 15:00, 17:00 (Peak), 19:00, 21:00
@@ -77,7 +95,7 @@ export const PharmacyDashboardPage: React.FC = () => {
 
           <Link
             to="/pharmacy/pos"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-sm"
           >
             <Calculator className="w-3.5 h-3.5" />
             <span>Launch POS</span>
@@ -88,67 +106,67 @@ export const PharmacyDashboardPage: React.FC = () => {
       {/* KPI Disciplined Grid - 7 specific metrics, no excessive cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
         {/* 1. Today's Sales */}
-        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-sm">
           <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-gray-500 block">
             Today's Sales
           </span>
-          <div className="font-mono text-base font-bold text-gray-900">₹18,450</div>
+          <div className="font-mono text-base font-bold text-gray-900">₹{todayTotalSales.toLocaleString('en-IN')}</div>
           <span className="text-[10px] text-emerald-700 font-mono font-medium block">
             ↑ 12.4% vs yest.
           </span>
         </div>
 
         {/* 2. Online Sales */}
-        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-sm">
           <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-gray-500 block">
             Online Sales
           </span>
-          <div className="font-mono text-base font-bold text-pine-800">₹5,820</div>
+          <div className="font-mono text-base font-bold text-pine-800">₹{todayOnlineSales.toLocaleString('en-IN')}</div>
           <span className="text-[10px] text-gray-500 font-mono block">6 orders (31.5%)</span>
         </div>
 
         {/* 3. Offline Sales */}
-        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-sm">
           <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-gray-500 block">
             Offline Sales
           </span>
-          <div className="font-mono text-base font-bold text-gray-900">₹12,630</div>
+          <div className="font-mono text-base font-bold text-gray-900">₹{todayOfflineSales.toLocaleString('en-IN')}</div>
           <span className="text-[10px] text-gray-500 font-mono block">18 counter sales</span>
         </div>
 
         {/* 4. Orders */}
-        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-sm">
           <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-gray-500 block">
             Orders
           </span>
-          <div className="font-mono text-base font-bold text-gray-900">24</div>
+          <div className="font-mono text-base font-bold text-gray-900">{totalOrdersCount}</div>
           <span className="text-[10px] text-gray-500 font-mono block">4 fulfillment ready</span>
         </div>
 
         {/* 5. Pending Prescriptions */}
-        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-sm">
           <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-amber-800 block">
             Pending Rx
           </span>
-          <div className="font-mono text-base font-bold text-amber-700">{pendingRx.length}</div>
+          <div className="font-mono text-base font-bold text-amber-700">{pendingRxCount}</div>
           <Link to="/pharmacy/prescriptions" className="text-[10px] text-pine-800 font-semibold hover:underline block">
             Review queue →
           </Link>
         </div>
 
         {/* 6. Low Stock */}
-        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-sm">
           <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-red-800 block">
             Low Stock
           </span>
-          <div className="font-mono text-base font-bold text-red-600">{lowStockItems.length}</div>
+          <div className="font-mono text-base font-bold text-red-600">{lowStockCount}</div>
           <Link to="/pharmacy/inventory" className="text-[10px] text-pine-800 font-semibold hover:underline block">
             Reorder items →
           </Link>
         </div>
 
         {/* 7. Expiring Soon */}
-        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-2xs">
+        <div className="bg-white border border-sand-300 rounded-md p-3 space-y-1 shadow-sm">
           <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-amber-800 block">
             Expiring Soon
           </span>
@@ -160,7 +178,7 @@ export const PharmacyDashboardPage: React.FC = () => {
       {/* Sales Overview Area - Disciplined Grid with Restrained Pine Line Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left 2 Cols: Sales Overview & Restrained Line Chart */}
-        <div className="lg:col-span-2 bg-white border border-sand-300 rounded-md p-4 space-y-4 shadow-2xs">
+        <div className="lg:col-span-2 bg-white border border-sand-300 rounded-md p-4 space-y-4 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-sand-200 pb-3">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 font-mono">
@@ -198,18 +216,11 @@ export const PharmacyDashboardPage: React.FC = () => {
             {/* SVG line chart */}
             <div className="w-full h-44 flex items-center justify-center">
               <svg viewBox="0 0 520 180" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="pineGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1B4332" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#1B4332" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
                 {/* Subtle base baseline only (No gridlines) */}
                 <line x1="20" y1="170" x2="500" y2="170" stroke="#DDD5C2" strokeWidth="1" />
 
-                {/* Filled Area */}
-                <path d={areaPath} fill="url(#pineGradient)" />
+                {/* Filled Area (Subtle flat pine tint, no gradients) */}
+                <path d={areaPath} fill="#1B4332" fillOpacity="0.04" />
 
                 {/* Main Smooth Curve Line (Restrained Pine #1B4332) */}
                 <path
@@ -266,7 +277,7 @@ export const PharmacyDashboardPage: React.FC = () => {
         </div>
 
         {/* Right Col: Priority Action Queue */}
-        <div className="bg-white border border-sand-300 rounded-md p-4 space-y-3.5 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white border border-sand-300 rounded-md p-4 space-y-3.5 shadow-sm flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between border-b border-sand-200 pb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 font-mono">
@@ -278,7 +289,7 @@ export const PharmacyDashboardPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              {pendingRx.map(p => (
+              {pendingRx.map((p: any) => (
                 <div key={p.id} className="p-2.5 rounded border border-sand-200 bg-sand-50/60 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-gray-900">{p.customerName}</span>
@@ -315,7 +326,7 @@ export const PharmacyDashboardPage: React.FC = () => {
       </div>
 
       {/* Recent Orders Compact Table */}
-      <div className="bg-white border border-sand-300 rounded-md p-4 space-y-3 shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md p-4 space-y-3 shadow-sm">
         <div className="flex items-center justify-between border-b border-sand-200 pb-2">
           <div className="flex items-center gap-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 font-mono">

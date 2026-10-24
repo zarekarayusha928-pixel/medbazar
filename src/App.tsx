@@ -41,9 +41,9 @@ import { PharmacyReportsPage } from '@/pages/pharmacy/PharmacyReportsPage';
 import { PharmacyStaffPage } from '@/pages/pharmacy/PharmacyStaffPage';
 import { PharmacySettingsPage } from '@/pages/pharmacy/PharmacySettingsPage';
 
-// Admin Pages
 import { AdminOverviewPage } from '@/pages/admin/AdminOverviewPage';
 import { AdminPharmaciesPage } from '@/pages/admin/AdminPharmaciesPage';
+import { PharmacyDetailsPage } from '@/pages/admin/PharmacyDetailsPage';
 import { AdminBranchesPage } from '@/pages/admin/AdminBranchesPage';
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
 import { AdminMedicinesPage } from '@/pages/admin/AdminMedicinesPage';
@@ -99,6 +99,7 @@ export const App: React.FC = () => {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminOverviewPage />} />
               <Route path="pharmacies" element={<AdminPharmaciesPage />} />
+              <Route path="pharmacies/:id" element={<PharmacyDetailsPage />} />
               <Route path="branches" element={<AdminBranchesPage />} />
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="medicines" element={<AdminMedicinesPage />} />

@@ -24,6 +24,7 @@ import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { useToast } from '@/components/ui/Toast';
 import { CustomerAddress } from '@/types';
 import { MOCK_CUSTOMERS, MOCK_PRESCRIPTIONS, MOCK_ORDERS } from '@/services/api/mockData';
+import { authApi } from '@/services/api/authApi';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -76,11 +77,13 @@ export const ProfilePage: React.FC = () => {
     setPasswordLoading(true);
     setPasswordError('');
     try {
-      await new Promise(r => setTimeout(r, 600));
+      await authApi.resetPassword(newPassword);
       showToast('Password Updated', 'Your customer password was changed successfully.', 'success');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
+    } catch (err: any) {
+      setPasswordError(err?.message || 'Failed to update password.');
     } finally {
       setPasswordLoading(false);
     }
@@ -143,31 +146,35 @@ export const ProfilePage: React.FC = () => {
       {/* Main Tabbed Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Navigation Sidebar Tabs */}
-        <div className="space-y-1.5 md:col-span-1">
+        <div role="tablist" aria-label="Customer profile navigation" className="space-y-1.5 md:col-span-1">
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'PROFILE'}
             onClick={() => setActiveTab('PROFILE')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold text-left transition-colors ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-semibold text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               activeTab === 'PROFILE'
-                ? 'bg-pine-700 text-white shadow-2xs'
+                ? 'bg-pine-700 text-white shadow-sm'
                 : 'bg-white border border-sand-300 text-gray-700 hover:bg-sand-100'
             }`}
           >
-            <User className="w-4 h-4" />
+            <User className="w-4 h-4" aria-hidden="true" />
             <span>Personal Profile</span>
           </button>
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'ADDRESSES'}
             onClick={() => setActiveTab('ADDRESSES')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-left transition-colors ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-xs font-semibold text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               activeTab === 'ADDRESSES'
-                ? 'bg-pine-700 text-white shadow-2xs'
+                ? 'bg-pine-700 text-white shadow-sm'
                 : 'bg-white border border-sand-300 text-gray-700 hover:bg-sand-100'
             }`}
           >
             <div className="flex items-center gap-3">
-              <MapPin className="w-4 h-4" />
+              <MapPin className="w-4 h-4" aria-hidden="true" />
               <span>Saved Addresses</span>
             </div>
             <span className={`font-mono text-[11px] px-1.5 py-0.5 rounded-full ${activeTab === 'ADDRESSES' ? 'bg-pine-800 text-white' : 'bg-sand-200 text-gray-700'}`}>
@@ -177,15 +184,17 @@ export const ProfilePage: React.FC = () => {
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'PRESCRIPTIONS'}
             onClick={() => setActiveTab('PRESCRIPTIONS')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-left transition-colors ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-xs font-semibold text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               activeTab === 'PRESCRIPTIONS'
-                ? 'bg-pine-700 text-white shadow-2xs'
+                ? 'bg-pine-700 text-white shadow-sm'
                 : 'bg-white border border-sand-300 text-gray-700 hover:bg-sand-100'
             }`}
           >
             <div className="flex items-center gap-3">
-              <FileText className="w-4 h-4" />
+              <FileText className="w-4 h-4" aria-hidden="true" />
               <span>Prescriptions</span>
             </div>
             <span className={`font-mono text-[11px] px-1.5 py-0.5 rounded-full ${activeTab === 'PRESCRIPTIONS' ? 'bg-pine-800 text-white' : 'bg-sand-200 text-gray-700'}`}>
@@ -195,15 +204,17 @@ export const ProfilePage: React.FC = () => {
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'ORDERS'}
             onClick={() => setActiveTab('ORDERS')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-left transition-colors ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-xs font-semibold text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               activeTab === 'ORDERS'
-                ? 'bg-pine-700 text-white shadow-2xs'
+                ? 'bg-pine-700 text-white shadow-sm'
                 : 'bg-white border border-sand-300 text-gray-700 hover:bg-sand-100'
             }`}
           >
             <div className="flex items-center gap-3">
-              <Package className="w-4 h-4" />
+              <Package className="w-4 h-4" aria-hidden="true" />
               <span>Orders</span>
             </div>
             <span className={`font-mono text-[11px] px-1.5 py-0.5 rounded-full ${activeTab === 'ORDERS' ? 'bg-pine-800 text-white' : 'bg-sand-200 text-gray-700'}`}>
@@ -213,14 +224,16 @@ export const ProfilePage: React.FC = () => {
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'SETTINGS'}
             onClick={() => setActiveTab('SETTINGS')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold text-left transition-colors ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-semibold text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               activeTab === 'SETTINGS'
-                ? 'bg-pine-700 text-white shadow-2xs'
+                ? 'bg-pine-700 text-white shadow-sm'
                 : 'bg-white border border-sand-300 text-gray-700 hover:bg-sand-100'
             }`}
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-4 h-4" aria-hidden="true" />
             <span>Account Settings</span>
           </button>
         </div>
@@ -229,9 +242,9 @@ export const ProfilePage: React.FC = () => {
         <div className="md:col-span-3">
           {/* TAB 1: PROFILE */}
           {activeTab === 'PROFILE' && (
-            <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm">
               <div className="border-b border-sand-200 pb-4 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-sand-100 border border-sand-300 text-pine-800 flex items-center justify-center font-bold text-xl font-mono">
+                <div className="w-16 h-16 rounded-lg bg-sand-100 border border-sand-300 text-pine-800 flex items-center justify-center font-bold text-xl font-mono">
                   RS
                 </div>
                 <div>
@@ -247,7 +260,7 @@ export const ProfilePage: React.FC = () => {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-sand-300 text-xs focus:outline-none focus:border-pine-600"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-sand-300 text-xs focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500"
                   />
                 </div>
 
@@ -258,7 +271,7 @@ export const ProfilePage: React.FC = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-300 text-xs focus:outline-none focus:border-pine-600"
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-sand-300 text-xs focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500"
                     />
                   </div>
 
@@ -268,7 +281,7 @@ export const ProfilePage: React.FC = () => {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-300 text-xs focus:outline-none focus:border-pine-600"
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-sand-300 text-xs focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500"
                     />
                   </div>
                 </div>
@@ -276,7 +289,7 @@ export const ProfilePage: React.FC = () => {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-2.5 rounded-xl transition-colors shadow-2xs"
+                    className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-2.5 rounded-lg transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     Save Changes
                   </button>
@@ -287,7 +300,7 @@ export const ProfilePage: React.FC = () => {
 
           {/* TAB 2: ADDRESSES */}
           {activeTab === 'ADDRESSES' && (
-            <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm">
               <div className="flex items-center justify-between border-b border-sand-200 pb-4">
                 <div>
                   <h3 className="font-bold text-base text-gray-900">Saved Delivery Addresses</h3>
@@ -296,7 +309,7 @@ export const ProfilePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddAddress(true)}
-                  className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs"
+                  className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Address</span>
@@ -305,15 +318,15 @@ export const ProfilePage: React.FC = () => {
 
               {/* Add Address Form Modal / Drawer */}
               {showAddAddress && (
-                <form onSubmit={handleAddAddress} className="p-5 rounded-2xl bg-sand-100 border border-sand-300 space-y-3 text-xs">
+                <form onSubmit={handleAddAddress} className="p-4 sm:p-5 rounded-lg bg-sand-100 border border-sand-300 space-y-3 text-xs">
                   <span className="font-bold text-gray-900 block font-mono">New Delivery Location</span>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-600 mb-1">Address Label:</label>
                       <select
                         value={newType}
                         onChange={(e) => setNewType(e.target.value as 'HOME' | 'WORK' | 'OTHER')}
-                        className="w-full px-3 py-2 rounded-xl border border-sand-300 bg-white"
+                        className="w-full px-3 py-2 rounded-lg border border-sand-300 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                       >
                         <option value="HOME">Home</option>
                         <option value="WORK">Work / Office</option>
@@ -326,7 +339,7 @@ export const ProfilePage: React.FC = () => {
                         type="text"
                         value={newCity}
                         onChange={(e) => setNewCity(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-sand-300 bg-white"
+                        className="w-full px-3 py-2 rounded-lg border border-sand-300 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                       />
                     </div>
                   </div>
@@ -339,18 +352,18 @@ export const ProfilePage: React.FC = () => {
                       onChange={(e) => setNewLine(e.target.value)}
                       placeholder="e.g. 402, Sunshine Villa, FC Road"
                       required
-                      className="w-full px-3 py-2 rounded-xl border border-sand-300 bg-white"
+                      className="w-full px-3 py-2 rounded-lg border border-sand-300 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-600 mb-1">Pincode:</label>
                       <input
                         type="text"
                         value={newPincode}
                         onChange={(e) => setNewPincode(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-sand-300 bg-white"
+                        className="w-full px-3 py-2 rounded-lg border border-sand-300 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                       />
                     </div>
                   </div>
@@ -358,14 +371,14 @@ export const ProfilePage: React.FC = () => {
                   <div className="flex gap-2 pt-1">
                     <button
                       type="submit"
-                      className="bg-pine-700 hover:bg-pine-800 text-white font-semibold px-4 py-2 rounded-xl"
+                      className="bg-pine-700 hover:bg-pine-800 text-white font-semibold px-4 py-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       Save Address
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowAddAddress(false)}
-                      className="bg-white border border-sand-300 text-gray-700 font-semibold px-4 py-2 rounded-xl"
+                      className="bg-white border border-sand-300 text-gray-700 hover:bg-sand-50 font-semibold px-4 py-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       Cancel
                     </button>
@@ -378,7 +391,7 @@ export const ProfilePage: React.FC = () => {
                 {addresses.map((addr) => (
                   <div
                     key={addr.id}
-                    className="p-5 rounded-2xl border border-sand-300 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs"
+                    className="p-4 sm:p-5 rounded-lg border border-sand-300 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -395,7 +408,7 @@ export const ProfilePage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleSetDefaultAddress(addr.id)}
-                          className="text-pine-800 font-semibold hover:underline"
+                          className="text-pine-800 font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
                         >
                           Make Default
                         </button>
@@ -403,7 +416,7 @@ export const ProfilePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDeleteAddress(addr.id)}
-                        className="text-gray-400 hover:text-red-600 p-1"
+                        className="text-gray-400 hover:text-red-600 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
                         title="Delete Address"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -417,7 +430,7 @@ export const ProfilePage: React.FC = () => {
 
           {/* TAB 3: PRESCRIPTIONS */}
           {activeTab === 'PRESCRIPTIONS' && (
-            <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm">
               <div className="flex items-center justify-between border-b border-sand-200 pb-4">
                 <div>
                   <h3 className="font-bold text-base text-gray-900">Uploaded Prescriptions</h3>
@@ -425,7 +438,7 @@ export const ProfilePage: React.FC = () => {
                 </div>
                 <Link
                   to="/customer/prescriptions"
-                  className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs"
+                  className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span>Upload New</span>
@@ -436,10 +449,10 @@ export const ProfilePage: React.FC = () => {
                 {prescriptions.map((rx) => (
                   <div
                     key={rx.id}
-                    className="p-5 rounded-2xl border border-sand-300 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs"
+                    className="p-4 sm:p-5 rounded-lg border border-sand-300 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-sand-100 text-pine-700 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-sand-100 text-pine-700 flex items-center justify-center shrink-0">
                         <FileText className="w-5 h-5" />
                       </div>
                       <div className="space-y-1">
@@ -462,7 +475,7 @@ export const ProfilePage: React.FC = () => {
                       href={rx.fileUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3.5 py-1.5 rounded-xl border border-sand-300 hover:border-pine-700 text-pine-800 font-semibold text-xs transition-colors shrink-0"
+                      className="px-3.5 py-1.5 rounded-lg border border-sand-300 hover:border-pine-700 text-pine-800 font-semibold text-xs transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       View File
                     </a>
@@ -474,7 +487,7 @@ export const ProfilePage: React.FC = () => {
 
           {/* TAB 4: ORDERS */}
           {activeTab === 'ORDERS' && (
-            <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm">
               <div className="flex items-center justify-between border-b border-sand-200 pb-4">
                 <div>
                   <h3 className="font-bold text-base text-gray-900">Recent Medicine Orders</h3>
@@ -482,7 +495,7 @@ export const ProfilePage: React.FC = () => {
                 </div>
                 <Link
                   to="/customer/orders"
-                  className="text-xs font-semibold text-pine-800 hover:underline"
+                  className="text-xs font-semibold text-pine-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
                 >
                   View All Orders →
                 </Link>
@@ -492,7 +505,7 @@ export const ProfilePage: React.FC = () => {
                 {MOCK_ORDERS.map((ord) => (
                   <div
                     key={ord.id}
-                    className="p-4 rounded-2xl border border-sand-300 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
+                    className="p-4 rounded-lg border border-sand-300 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -511,7 +524,7 @@ export const ProfilePage: React.FC = () => {
                       <span className="font-bold text-sm text-gray-900 font-sans">₹{ord.total.toFixed(2)}</span>
                       <Link
                         to={`/customer/orders/${ord.id}`}
-                        className="bg-sand-100 hover:bg-sand-200 text-pine-800 font-semibold px-3 py-1.5 rounded-xl border border-sand-300"
+                        className="bg-sand-100 hover:bg-sand-200 text-pine-800 font-semibold px-3 py-1.5 rounded-lg border border-sand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                       >
                         Details
                       </Link>
@@ -524,7 +537,7 @@ export const ProfilePage: React.FC = () => {
 
           {/* TAB 5: SETTINGS */}
           {activeTab === 'SETTINGS' && (
-            <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm">
               <div className="border-b border-sand-200 pb-4">
                 <h3 className="font-bold text-base text-gray-900">Notification & Account Settings</h3>
                 <p className="text-xs text-gray-500">Configure how you receive order updates and security options.</p>
@@ -533,7 +546,7 @@ export const ProfilePage: React.FC = () => {
               <div className="space-y-4 text-xs">
                 <h4 className="font-bold text-gray-800 uppercase font-mono text-[11px]">Fulfillment Notifications</h4>
                 
-                <label className="flex items-center justify-between p-3.5 rounded-2xl border border-sand-300 cursor-pointer">
+                <label className="flex items-center justify-between p-3.5 rounded-lg border border-sand-300 cursor-pointer hover:bg-sand-50/50">
                   <div className="space-y-0.5">
                     <span className="font-bold text-gray-900 block">SMS Notifications</span>
                     <span className="text-gray-500">Receive SMS alerts when pharmacist confirms or dispatches order.</span>
@@ -546,7 +559,7 @@ export const ProfilePage: React.FC = () => {
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-3.5 rounded-2xl border border-sand-300 cursor-pointer">
+                <label className="flex items-center justify-between p-3.5 rounded-lg border border-sand-300 cursor-pointer hover:bg-sand-50/50">
                   <div className="space-y-0.5">
                     <span className="font-bold text-gray-900 block">WhatsApp Order Updates</span>
                     <span className="text-gray-500">Receive real-time courier tracking and digital bill via WhatsApp.</span>
@@ -559,7 +572,7 @@ export const ProfilePage: React.FC = () => {
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-3.5 rounded-2xl border border-sand-300 cursor-pointer">
+                <label className="flex items-center justify-between p-3.5 rounded-lg border border-sand-300 cursor-pointer hover:bg-sand-50/50">
                   <div className="space-y-0.5">
                     <span className="font-bold text-gray-900 block">Email Tax Receipts</span>
                     <span className="text-gray-500">Send itemized PDF receipts directly to {customer.email}.</span>
@@ -577,7 +590,7 @@ export const ProfilePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => showToast('Settings Saved', 'Notification preferences updated.', 'success')}
-                  className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-2.5 rounded-xl transition-colors shadow-2xs"
+                  className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-2.5 rounded-lg transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   Save Notification Preferences
                 </button>
@@ -604,7 +617,7 @@ export const ProfilePage: React.FC = () => {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-3.5 py-2 rounded-xl border border-sand-300 text-xs focus:outline-none focus:border-pine-600"
+                      className="w-full px-3.5 py-2 rounded-lg border border-sand-300 text-xs focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500"
                     />
                   </div>
                   <div>
@@ -614,7 +627,7 @@ export const ProfilePage: React.FC = () => {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-3.5 py-2 rounded-xl border border-sand-300 text-xs focus:outline-none focus:border-pine-600"
+                      className="w-full px-3.5 py-2 rounded-lg border border-sand-300 text-xs focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500"
                     />
                   </div>
                   <div>
@@ -624,13 +637,13 @@ export const ProfilePage: React.FC = () => {
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-3.5 py-2 rounded-xl border border-sand-300 text-xs focus:outline-none focus:border-pine-600"
+                      className="w-full px-3.5 py-2 rounded-lg border border-sand-300 text-xs focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={passwordLoading}
-                    className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-5 py-2 rounded-xl transition-colors shadow-2xs disabled:opacity-50"
+                    className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-5 py-2 rounded-lg transition-colors shadow-sm disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     {passwordLoading ? 'Updating...' : 'Update Password'}
                   </button>
@@ -646,7 +659,7 @@ export const ProfilePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="px-4 py-2 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-xs transition-colors"
+                  className="px-4 py-2 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 >
                   Sign Out
                 </button>

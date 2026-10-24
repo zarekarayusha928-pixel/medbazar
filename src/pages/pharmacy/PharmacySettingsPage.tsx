@@ -54,7 +54,7 @@ export const PharmacySettingsPage: React.FC = () => {
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-2xs"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-sm"
         >
           <Save className="w-3.5 h-3.5" />
           <span>Save All Settings</span>
@@ -62,11 +62,13 @@ export const PharmacySettingsPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-sand-300 gap-2 font-mono text-xs">
+      <div role="tablist" aria-label="Pharmacy configuration tabs" className="flex border-b border-sand-300 gap-2 font-mono text-xs">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'PROFILE'}
           onClick={() => setActiveTab('PROFILE')}
-          className={`pb-2 px-3 border-b-2 font-semibold transition-colors ${
+          className={`pb-2 px-3 border-b-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-pine-600 ${
             activeTab === 'PROFILE'
               ? 'border-pine-700 text-pine-800'
               : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -76,8 +78,10 @@ export const PharmacySettingsPage: React.FC = () => {
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'BRANCH'}
           onClick={() => setActiveTab('BRANCH')}
-          className={`pb-2 px-3 border-b-2 font-semibold transition-colors ${
+          className={`pb-2 px-3 border-b-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-pine-600 ${
             activeTab === 'BRANCH'
               ? 'border-pine-700 text-pine-800'
               : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -87,8 +91,10 @@ export const PharmacySettingsPage: React.FC = () => {
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'STAFF'}
           onClick={() => setActiveTab('STAFF')}
-          className={`pb-2 px-3 border-b-2 font-semibold transition-colors ${
+          className={`pb-2 px-3 border-b-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-pine-600 ${
             activeTab === 'STAFF'
               ? 'border-pine-700 text-pine-800'
               : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -98,8 +104,10 @@ export const PharmacySettingsPage: React.FC = () => {
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'NOTIFICATIONS'}
           onClick={() => setActiveTab('NOTIFICATIONS')}
-          className={`pb-2 px-3 border-b-2 font-semibold transition-colors ${
+          className={`pb-2 px-3 border-b-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-pine-600 ${
             activeTab === 'NOTIFICATIONS'
               ? 'border-pine-700 text-pine-800'
               : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -110,7 +118,7 @@ export const PharmacySettingsPage: React.FC = () => {
       </div>
 
       {/* Settings Form Container */}
-      <form onSubmit={handleSave} className="bg-white border border-sand-300 rounded-md p-5 shadow-2xs max-w-3xl space-y-5 text-xs">
+      <form onSubmit={handleSave} className="bg-white border border-sand-300 rounded-md p-5 shadow-sm max-w-3xl space-y-5 text-xs">
         {/* 1. PHARMACY PROFILE */}
         {activeTab === 'PROFILE' && (
           <div className="space-y-4">
@@ -378,7 +386,7 @@ export const PharmacySettingsPage: React.FC = () => {
         <div className="pt-2 border-t border-sand-200">
           <button
             type="submit"
-            className="px-4 py-2 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-2xs"
+            className="px-4 py-2 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-sm"
           >
             Save Configuration Changes
           </button>

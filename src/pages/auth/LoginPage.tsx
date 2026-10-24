@@ -57,10 +57,12 @@ export const LoginPage: React.FC = () => {
     setErrors({});
 
     try {
-      // Simulate frontend-only authentication delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const ok = await login(identifier.trim(), password, 'CUSTOMER');
+      if (!ok) {
+        setErrors({ general: 'Authentication failed. Please check your credentials and try again.' });
+        return;
+      }
 
-      await login(identifier.trim(), password, 'CUSTOMER');
       setIsSuccess(true);
       showToast('Login Successful', 'Welcome back to Med Bazar!', 'success');
 
@@ -97,10 +99,10 @@ export const LoginPage: React.FC = () => {
         {/* Brand Header */}
         <Link
           to="/customer"
-          className="inline-flex items-center gap-2.5 group focus:outline-none focus:ring-2 focus:ring-brand-500 rounded-2xl p-1"
+          className="inline-flex items-center gap-2.5 group focus:outline-none focus:ring-2 focus:ring-brand-500 rounded-lg p-1"
           aria-label="Med Bazar Home"
         >
-          <div className="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center font-bold shadow-2xs group-hover:bg-brand-700 transition-colors">
+          <div className="w-12 h-12 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold shadow-sm group-hover:bg-brand-700 transition-colors">
             <Pill className="w-7 h-7" />
           </div>
           <span className="text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -116,12 +118,12 @@ export const LoginPage: React.FC = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white border border-sand-300 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6">
+        <div className="bg-white border border-sand-300 rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm space-y-6">
           {/* General Error Banner */}
           {errors.general && (
             <div
               role="alert"
-              className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 animate-fadeIn"
+              className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 animate-fadeIn"
             >
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errors.general}</span>
@@ -132,7 +134,7 @@ export const LoginPage: React.FC = () => {
           {isSuccess && (
             <div
               role="status"
-              className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2.5 animate-fadeIn"
+              className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2.5 animate-fadeIn"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="font-semibold">Login verified! Redirecting to customer marketplace...</span>
@@ -149,7 +151,7 @@ export const LoginPage: React.FC = () => {
                 Email Address or Mobile Number <span className="text-red-500" aria-hidden="true">*</span>
               </label>
 
-              <div className="relative rounded-xl shadow-2xs">
+              <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                   {identifier.includes('@') ? (
                     <Mail className="w-4 h-4" />
@@ -172,10 +174,10 @@ export const LoginPage: React.FC = () => {
                   placeholder="e.g. rajesh@example.com or 9876543210"
                   aria-invalid={Boolean(errors.identifier)}
                   aria-describedby={errors.identifier ? 'identifier-error' : undefined}
-                  className={`block w-full rounded-xl border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
+                  className={`block w-full rounded-lg border text-xs font-sans pl-10 pr-3.5 py-2.5 transition-all duration-150 ${
                     errors.identifier
                       ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-red-950 bg-red-50/20'
-                      : 'border-sand-300 hover:border-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
+                      : 'border-sand-300 hover:border-sand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
                   } disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed`}
                 />
               </div>
@@ -205,7 +207,7 @@ export const LoginPage: React.FC = () => {
                 </Link>
               </div>
 
-              <div className="relative rounded-xl shadow-2xs">
+              <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                   <Lock className="w-4 h-4" />
                 </div>
@@ -224,10 +226,10 @@ export const LoginPage: React.FC = () => {
                   placeholder="••••••••"
                   aria-invalid={Boolean(errors.password)}
                   aria-describedby={errors.password ? 'password-error' : undefined}
-                  className={`block w-full rounded-xl border text-xs font-sans pl-10 pr-10 py-2.5 transition-all duration-150 ${
+                  className={`block w-full rounded-lg border text-xs font-sans pl-10 pr-10 py-2.5 transition-all duration-150 ${
                     errors.password
                       ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-red-950 bg-red-50/20'
-                      : 'border-sand-300 hover:border-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
+                      : 'border-sand-300 hover:border-sand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 bg-white text-gray-900'
                   } disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed`}
                 />
 
@@ -268,7 +270,7 @@ export const LoginPage: React.FC = () => {
               type="submit"
               disabled={isLoading || isSuccess}
               isLoading={isLoading}
-              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-xl shadow-2xs transition-all duration-150 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition-all duration-150 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
               rightIcon={!isLoading && <ArrowRight className="w-4 h-4" />}
             >
               {isSuccess ? 'Verified' : 'Sign In to Med Bazar'}

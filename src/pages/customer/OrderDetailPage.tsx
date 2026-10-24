@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Package,
@@ -18,13 +18,34 @@ import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { useToast } from '@/components/ui/Toast';
 import { useCart } from '@/context/CartContext';
 import { MOCK_ORDERS, MOCK_MEDICINES } from '@/services/api/mockData';
+import { orderApi } from '@/services/api/orderApi';
+import { Order } from '@/types';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
   const { showToast } = useToast();
 
-  const order = MOCK_ORDERS.find(o => o.id === id) || MOCK_ORDERS[0];
+  const [order, setOrder] = useState<Order>(() => {
+    return MOCK_ORDERS.find((o) => o.id === id) || MOCK_ORDERS[0];
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    orderApi
+      .getOrderById(id)
+      .then((data) => {
+        if (data) setOrder(data);
+      })
+      .catch((_err) => {
+        // Fallback to initial state
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [id]);
 
   // Exact 6 timeline stages required:
   // 1. Order placed
@@ -64,15 +85,29 @@ export const OrderDetailPage: React.FC = () => {
   };
 
   const currentStageIndex = getStageIndex(order.status);
+  const [reordering, setReordering] = useState(false);
 
-  const handleReorder = () => {
-    order.items.forEach(i => {
-      const med = MOCK_MEDICINES.find(m => m.id === i.medicineId);
-      if (med) {
-        addToCart(med, i.quantity, undefined, i.unitPrice);
-      }
-    });
-    showToast('Items Added to Cart', 'Items from this order have been added to your shopping cart.', 'success');
+  const handleReorder = async () => {
+    try {
+      setReordering(true);
+      const newOrder = await orderApi.reorder(order.id);
+      showToast(
+        'Reorder Placed Successfully',
+        `New order #${newOrder.orderNumber} placed with current verified pricing and stock.`,
+        'success'
+      );
+    } catch (err: any) {
+      // Fallback: add items to cart for manual checkout
+      (order.items || []).forEach((i: any) => {
+        const med = MOCK_MEDICINES.find((m) => m.id === i.medicineId);
+        if (med) {
+          addToCart(med, i.quantity, undefined, Number(i.unitPrice));
+        }
+      });
+      showToast('Items Added to Cart', err?.message || 'Items from this order have been added to your cart.', 'info');
+    } finally {
+      setReordering(false);
+    }
   };
 
   return (
@@ -90,10 +125,11 @@ export const OrderDetailPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <Link
               to="/customer/orders"
-              className="p-1 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-sand-100 transition-colors"
+              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-sand-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              aria-label="Back to orders list"
               title="Back to orders"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             </Link>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-sans">
               Order #{order.orderNumber}
@@ -119,15 +155,16 @@ export const OrderDetailPage: React.FC = () => {
         <button
           type="button"
           onClick={handleReorder}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sand-100 hover:bg-sand-200 border border-sand-300 text-pine-800 font-semibold text-xs transition-colors self-start sm:self-auto shadow-2xs"
+          disabled={reordering}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-sand-100 hover:bg-sand-200 border border-sand-300 text-pine-800 font-semibold text-xs transition-colors self-start sm:self-auto shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reorder Items</span>
+          <RotateCcw className={`w-3.5 h-3.5 ${reordering ? 'animate-spin' : ''}`} aria-hidden="true" />
+          <span>{reordering ? 'Placing Reorder...' : 'Reorder Items'}</span>
         </button>
       </div>
 
       {/* Minimal Visual Treatment Status Timeline */}
-      <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6 shadow-2xs">
+      <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm">
         <div className="flex items-center justify-between border-b border-sand-200 pb-3">
           <span className="font-mono text-xs uppercase tracking-wider text-pine-800 font-bold">
             Fulfillment Timeline
@@ -189,7 +226,7 @@ export const OrderDetailPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Prescription Status Banner if order has Rx */}
           {order.prescriptionId && (
-            <div className="p-4 rounded-2xl bg-sand-100 border border-sand-300 flex items-start gap-3 text-xs">
+            <div className="p-4 rounded-lg bg-sand-100 border border-sand-300 flex items-start gap-3 text-xs">
               <FileText className="w-5 h-5 text-pine-700 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 <span className="font-bold text-gray-900 block font-sans">
@@ -203,48 +240,50 @@ export const OrderDetailPage: React.FC = () => {
           )}
 
           {/* Itemized Table */}
-          <div className="bg-white rounded-3xl border border-sand-300 overflow-hidden shadow-2xs">
-            <div className="bg-sand-100 px-6 py-3.5 border-b border-sand-300 font-mono text-xs uppercase tracking-wider text-gray-700 font-bold">
+          <div className="bg-white rounded-lg border border-sand-300 overflow-hidden shadow-sm">
+            <div className="bg-sand-100 px-4 sm:px-6 py-3.5 border-b border-sand-300 font-mono text-xs uppercase tracking-wider text-gray-700 font-bold">
               Dispensed Items ({order.items.length})
             </div>
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-sand-200 text-gray-400 font-mono text-[10px] uppercase">
-                  <th className="py-2.5 px-6 font-semibold">Medicine Description</th>
-                  <th className="py-2.5 px-4 font-semibold text-center">Quantity</th>
-                  <th className="py-2.5 px-4 font-semibold text-right">Unit Price</th>
-                  <th className="py-2.5 px-6 font-semibold text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sand-200">
-                {order.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-sand-50/40">
-                    <td className="py-4 px-6 font-sans">
-                      <p className="font-bold text-gray-900">{item.medicineName}</p>
-                      <p className="text-[11px] text-gray-400 font-mono">
-                        Item ID: {item.medicineId}
-                      </p>
-                    </td>
-                    <td className="py-4 px-4 text-center font-mono font-semibold text-gray-800">
-                      {item.quantity}
-                    </td>
-                    <td className="py-4 px-4 text-right font-mono text-gray-600">
-                      ₹{item.unitPrice.toFixed(2)}
-                    </td>
-                    <td className="py-4 px-6 text-right font-sans font-bold text-gray-900">
-                      ₹{item.total.toFixed(2)}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-sand-200 text-gray-400 font-mono text-[10px] uppercase">
+                    <th className="py-2.5 px-4 sm:px-6 font-semibold">Medicine Description</th>
+                    <th className="py-2.5 px-4 font-semibold text-center">Quantity</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">Unit Price</th>
+                    <th className="py-2.5 px-4 sm:px-6 font-semibold text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-sand-200">
+                  {(order.items || []).map((item: any) => (
+                    <tr key={item.id} className="hover:bg-sand-50/40">
+                      <td className="py-4 px-4 sm:px-6 font-sans">
+                        <p className="font-bold text-gray-900">{item.medicineName}</p>
+                        <p className="text-[11px] text-gray-400 font-mono">
+                          Item ID: {item.medicineId}
+                        </p>
+                      </td>
+                      <td className="py-4 px-4 text-center font-mono font-semibold text-gray-800">
+                        {item.quantity}
+                      </td>
+                      <td className="py-4 px-4 text-right font-mono text-gray-600">
+                        ₹{Number(item.unitPrice).toFixed(2)}
+                      </td>
+                      <td className="py-4 px-4 sm:px-6 text-right font-sans font-bold text-gray-900">
+                        ₹{Number(item.total).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         {/* Right Column: Pharmacy Details & Financial Receipt */}
         <div className="space-y-6">
           {/* Pharmacy & Delivery Information Card */}
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs text-xs">
+          <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 space-y-4 shadow-sm text-xs">
             <h3 className="font-bold text-sm text-gray-900 border-b border-sand-200 pb-3 font-mono uppercase tracking-wider">
               Dispensing & Delivery Info
             </h3>
@@ -271,7 +310,7 @@ export const OrderDetailPage: React.FC = () => {
           </div>
 
           {/* Receipt Breakdown */}
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs text-xs">
+          <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 space-y-4 shadow-sm text-xs">
             <h3 className="font-bold text-sm text-gray-900 border-b border-sand-200 pb-3 font-mono uppercase tracking-wider">
               Payment Summary
             </h3>

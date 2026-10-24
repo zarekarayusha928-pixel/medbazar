@@ -70,7 +70,7 @@ export const PharmacyListPage: React.FC = () => {
         </div>
 
         {/* Selected Branch Status */}
-        <div className="bg-sand-100 border border-sand-300 px-4 py-2.5 rounded-2xl flex items-center gap-3 text-xs font-mono">
+        <div className="bg-sand-100 border border-sand-300 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs font-mono">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
           <div>
             <span className="text-[10px] text-gray-400 block uppercase">Currently Dispensing From:</span>
@@ -80,26 +80,30 @@ export const PharmacyListPage: React.FC = () => {
       </div>
 
       {/* Controls & Filter Bar */}
-      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-sand-300 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+      <div className="bg-white p-3 sm:p-4 rounded-lg border border-sand-300 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" aria-hidden="true" />
+          <label htmlFor="pharmacy-search" className="sr-only">Search pharmacies</label>
           <input
+            id="pharmacy-search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by pharmacy name, area, or branch street..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-sand-300 text-xs text-gray-900 focus:outline-none focus:border-pine-600 font-sans"
+            aria-label="Search by pharmacy name, area, or branch street"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-sand-300 text-xs text-gray-900 focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500 font-sans"
           />
         </div>
 
         {/* City Filter Pills */}
-        <div className="flex items-center gap-1.5 font-sans">
+        <div className="flex items-center gap-1.5 font-sans" role="group" aria-label="City filter">
           <span className="text-gray-500 font-medium">City:</span>
           {['ALL', 'Pune', 'Mumbai'].map(c => (
             <button
               key={c}
               onClick={() => setCityFilter(c)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+              aria-pressed={cityFilter === c}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 cityFilter === c ? 'bg-pine-700 text-white' : 'bg-sand-100 text-gray-700 hover:bg-sand-200'
               }`}
             >
@@ -109,8 +113,15 @@ export const PharmacyListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Clean Comparison / List Structure (No card overload) */}
-      <div className="bg-white rounded-3xl border border-sand-300 overflow-hidden shadow-2xs">
+      {filteredBranches.length === 0 ? (
+        <div className="bg-white rounded-lg border border-sand-300 p-8 text-center">
+          <Store className="w-10 h-10 text-gray-400 mx-auto mb-2" aria-hidden="true" />
+          <h3 className="text-base font-bold text-gray-900">No pharmacies found</h3>
+          <p className="text-xs text-gray-500 mt-1">Try adjusting your search query or city filter.</p>
+        </div>
+      ) : (
+        /* Clean Comparison / List Structure (No card overload) */
+        <div className="bg-white rounded-lg border border-sand-300 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -187,7 +198,7 @@ export const PharmacyListPage: React.FC = () => {
                     <td className="py-4 px-5 align-top text-right">
                       <div className="flex flex-col items-end gap-2">
                         {isSelected ? (
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pine-700 text-white font-mono text-[11px] font-bold shadow-2xs">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pine-700 text-white font-mono text-[11px] font-bold shadow-sm">
                             <CheckCircle className="w-3.5 h-3.5" />
                             <span>Active Dispenser</span>
                           </div>
@@ -195,7 +206,7 @@ export const PharmacyListPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleSelectBranch(item)}
-                            className="px-3.5 py-1.5 rounded-xl border border-sand-300 hover:border-pine-700 bg-white hover:bg-pine-50 text-pine-800 font-semibold text-xs transition-colors shadow-2xs"
+                            className="px-3.5 py-1.5 rounded-xl border border-sand-300 hover:border-pine-700 bg-white hover:bg-pine-50 text-pine-800 font-semibold text-xs transition-colors shadow-sm"
                           >
                             Select Branch
                           </button>
@@ -217,6 +228,7 @@ export const PharmacyListPage: React.FC = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* Trust Guarantee Footnote */}
       <div className="bg-sand-100 rounded-2xl border border-sand-300 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
@@ -232,7 +244,7 @@ export const PharmacyListPage: React.FC = () => {
 
         <Link
           to="/customer/medicines"
-          className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-colors shrink-0 shadow-2xs"
+          className="bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-colors shrink-0 shadow-sm"
         >
           View All Medicines
         </Link>

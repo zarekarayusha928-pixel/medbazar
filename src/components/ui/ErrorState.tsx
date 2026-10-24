@@ -14,10 +14,10 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center bg-red-50/50 border border-red-200/80 rounded-xl my-4">
-      <AlertOctagon className="w-8 h-8 text-red-600 mb-2" />
+    <div className="flex flex-col items-center justify-center p-6 sm:p-8 text-center bg-red-50/50 border border-red-200/80 rounded-lg my-4" role="alert">
+      <AlertOctagon className="w-8 h-8 text-red-600 mb-2 shrink-0" aria-hidden="true" />
       <h3 className="text-base font-semibold text-red-900">{title}</h3>
-      <p className="mt-1 text-sm text-red-700 max-w-md">{message}</p>
+      <p className="mt-1 text-xs sm:text-sm text-red-700 max-w-md">{message}</p>
       {onRetry && (
         <div className="mt-4">
           <Button variant="outline" size="sm" onClick={onRetry} className="border-red-300 text-red-800 hover:bg-red-100">

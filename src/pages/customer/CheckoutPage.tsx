@@ -19,7 +19,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { useToast } from '@/components/ui/Toast';
 import { useCart } from '@/context/CartContext';
-import { MOCK_CUSTOMERS, MOCK_PRESCRIPTIONS, MOCK_ORDERS } from '@/services/api/mockData';
+import { MOCK_CUSTOMERS, MOCK_PRESCRIPTIONS } from '@/services/api/mockData';
+import { orderApi } from '@/services/api/orderApi';
+import { prescriptionApi } from '@/services/api/prescriptionApi';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,12 +51,12 @@ export const CheckoutPage: React.FC = () => {
   // If cart is empty, redirect back
   if (items.length === 0) {
     return (
-      <div className="text-center py-20 bg-white rounded-3xl border border-sand-300 max-w-lg mx-auto p-8 space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Your cart is empty</h3>
+      <div className="text-center py-16 sm:py-20 bg-white rounded-lg border border-sand-300 max-w-lg mx-auto p-6 sm:p-8 space-y-4">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900">Your cart is empty</h3>
         <p className="text-xs text-gray-500">Please add items to your cart before proceeding to checkout.</p>
         <Link
           to="/customer/medicines"
-          className="inline-block bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-3 rounded-xl transition-colors"
+          className="inline-block bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs px-6 py-3 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
           Browse Medicines
         </Link>
@@ -65,7 +67,7 @@ export const CheckoutPage: React.FC = () => {
   const effectiveDeliveryFee = fulfillmentType === 'PICKUP' ? 0 : deliveryFee;
   const grandPayable = Math.max(0, subtotal - discount + effectiveDeliveryFee);
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (hasRxItems && prescriptionChoice === 'UPLOAD_NEW' && !newPrescriptionFile && !newDoctorName) {
@@ -75,12 +77,49 @@ export const CheckoutPage: React.FC = () => {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      let finalRxId = hasRxItems ? selectedPrescriptionId : undefined;
+
+      if (hasRxItems && prescriptionChoice === 'UPLOAD_NEW') {
+        const uploaded = await prescriptionApi.uploadPrescription({
+          organizationId: selectedBranch.organizationId || 'pharm_1',
+          doctorName: newDoctorName.trim() || 'Consulting Physician',
+          fileName: newPrescriptionFile ? newPrescriptionFile.name : 'prescription_upload.pdf',
+          fileType: newPrescriptionFile?.type.includes('image') ? 'IMAGE' : 'PDF',
+        });
+        finalRxId = uploaded.id;
+      }
+
+      const selectedAddr = customer.addresses.find(a => a.id === selectedAddressId) || customer.addresses[0];
+      const deliveryAddress = fulfillmentType === 'DELIVERY'
+        ? (isAddingNewAddress
+            ? `${newAddressLine}, ${newCity} - ${newPincode}`
+            : `${selectedAddr.addressLine}, ${selectedAddr.city}, ${selectedAddr.state} - ${selectedAddr.pincode}`)
+        : undefined;
+
+      const orderPayload = {
+        branchId: selectedBranch.id,
+        organizationId: selectedBranch.organizationId,
+        items: items.map(i => ({ medicineId: i.medicine.id, quantity: i.quantity })),
+        orderType: fulfillmentType,
+        paymentMethod: paymentOption === 'ONLINE_UPI' ? 'UPI' : (paymentOption === 'COD' ? 'COD' : 'CARD'),
+        paymentRef: paymentOption === 'COD' ? undefined : `PAY-${Date.now()}`,
+        deliveryAddress,
+        prescriptionId: finalRxId,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        idempotencyKey: `idemp_order_${Date.now()}`,
+      };
+
+      const created = await orderApi.createOrder(orderPayload);
       clearCart();
-      showToast('Order Placed Successfully', 'Your medicine order #MB-2026-8801 has been sent to the branch pharmacist.', 'success');
-      navigate('/customer/orders/ord_101');
-    }, 900);
+      showToast('Order Placed Successfully', `Your medicine order #${created.orderNumber} has been received.`, 'success');
+      navigate(`/customer/orders/${created.id}`);
+    } catch (err: any) {
+      showToast('Order Failed', err?.message || 'Could not place order. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -105,7 +144,7 @@ export const CheckoutPage: React.FC = () => {
         {/* Left Two Columns: Options */}
         <div className="lg:col-span-2 space-y-6">
           {/* 1. Fulfillment Method (Delivery vs Pickup) */}
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs">
+          <div className="bg-white rounded-lg border border-sand-300 p-5 sm:p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-sand-200 pb-3">
               <h3 className="font-bold text-sm text-gray-900 uppercase tracking-wider font-mono">
                 1. Select Fulfillment Method
@@ -117,14 +156,14 @@ export const CheckoutPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFulfillmentType('DELIVERY')}
-                className={`p-4 rounded-2xl border text-left transition-all flex items-start gap-3 ${
+                className={`p-4 rounded-lg border text-left transition-all flex items-start gap-3 ${
                   fulfillmentType === 'DELIVERY'
                     ? 'border-pine-700 bg-sand-100 ring-2 ring-pine-600/30'
-                    : 'border-sand-300 bg-white hover:border-gray-400'
+                    : 'border-sand-300 bg-white hover:border-sand-400'
                 }`}
               >
-                <div className={`p-2 rounded-xl shrink-0 ${fulfillmentType === 'DELIVERY' ? 'bg-pine-700 text-white' : 'bg-sand-100 text-gray-600'}`}>
-                  <Truck className="w-5 h-5" />
+                <div className={`p-2 rounded-lg shrink-0 ${fulfillmentType === 'DELIVERY' ? 'bg-pine-700 text-white' : 'bg-sand-100 text-gray-600'}`}>
+                  <Truck className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div>
                   <span className="font-bold text-gray-900 text-sm block">Doorstep Delivery</span>
@@ -140,14 +179,14 @@ export const CheckoutPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFulfillmentType('PICKUP')}
-                className={`p-4 rounded-2xl border text-left transition-all flex items-start gap-3 ${
+                className={`p-4 rounded-lg border text-left transition-all flex items-start gap-3 ${
                   fulfillmentType === 'PICKUP'
                     ? 'border-pine-700 bg-sand-100 ring-2 ring-pine-600/30'
-                    : 'border-sand-300 bg-white hover:border-gray-400'
+                    : 'border-sand-300 bg-white hover:border-sand-400'
                 }`}
               >
-                <div className={`p-2 rounded-xl shrink-0 ${fulfillmentType === 'PICKUP' ? 'bg-pine-700 text-white' : 'bg-sand-100 text-gray-600'}`}>
-                  <Store className="w-5 h-5" />
+                <div className={`p-2 rounded-lg shrink-0 ${fulfillmentType === 'PICKUP' ? 'bg-pine-700 text-white' : 'bg-sand-100 text-gray-600'}`}>
+                  <Store className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div>
                   <span className="font-bold text-gray-900 text-sm block">Pharmacy Counter Pickup</span>
@@ -164,7 +203,7 @@ export const CheckoutPage: React.FC = () => {
 
           {/* 2. Address (If Delivery chosen) */}
           {fulfillmentType === 'DELIVERY' && (
-            <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs">
+            <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between border-b border-sand-200 pb-3">
                 <h3 className="font-bold text-sm text-gray-900 uppercase tracking-wider font-mono">
                   2. Delivery Address
@@ -172,7 +211,7 @@ export const CheckoutPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddingNewAddress(!isAddingNewAddress)}
-                  className="text-xs font-semibold text-pine-800 hover:underline flex items-center gap-1"
+                  className="text-xs font-semibold text-pine-800 hover:underline flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{isAddingNewAddress ? 'Cancel' : 'Add New Address'}</span>
@@ -184,10 +223,10 @@ export const CheckoutPage: React.FC = () => {
                 {customer.addresses.map((addr) => (
                   <label
                     key={addr.id}
-                    className={`p-4 rounded-2xl border flex items-start justify-between cursor-pointer transition-colors ${
+                    className={`p-3.5 sm:p-4 rounded-lg border flex items-start justify-between cursor-pointer transition-colors ${
                       selectedAddressId === addr.id && !isAddingNewAddress
                         ? 'border-pine-700 bg-sand-100 ring-1 ring-pine-700'
-                        : 'border-sand-300 bg-white hover:border-gray-400'
+                        : 'border-sand-300 bg-white hover:border-sand-400'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -218,7 +257,7 @@ export const CheckoutPage: React.FC = () => {
 
                 {/* Inline New Address Form */}
                 {isAddingNewAddress && (
-                  <div className="p-4 rounded-2xl border border-pine-600 bg-sand-50 space-y-3 text-xs">
+                  <div className="p-4 rounded-lg border border-pine-600 bg-sand-50 space-y-3 text-xs">
                     <span className="font-bold text-gray-900 block font-mono">Enter Delivery Address</span>
                     <div>
                       <label className="block text-gray-600 mb-1">Street Address / Apartment / Flat:</label>
@@ -227,17 +266,17 @@ export const CheckoutPage: React.FC = () => {
                         value={newAddressLine}
                         onChange={(e) => setNewAddressLine(e.target.value)}
                         placeholder="e.g. Flat 402, Sunshine Heights, MG Road"
-                        className="w-full px-3 py-2 rounded-xl border border-sand-300 bg-white text-xs focus:outline-none focus:border-pine-600"
+                        className="w-full px-3 py-2 rounded-lg border border-sand-300 bg-white text-xs focus:outline-none focus:border-pine-600"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-gray-600 mb-1">City:</label>
                         <input
                           type="text"
                           value={newCity}
                           onChange={(e) => setNewCity(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl border border-sand-300 bg-white text-xs"
+                          className="w-full px-3 py-2 rounded-lg border border-sand-300 bg-white text-xs focus:outline-none focus:border-pine-600"
                         />
                       </div>
                       <div>
@@ -246,7 +285,7 @@ export const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newPincode}
                           onChange={(e) => setNewPincode(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl border border-sand-300 bg-white text-xs"
+                          className="w-full px-3 py-2 rounded-lg border border-sand-300 bg-white text-xs focus:outline-none focus:border-pine-600"
                         />
                       </div>
                     </div>
@@ -257,7 +296,7 @@ export const CheckoutPage: React.FC = () => {
           )}
 
           {/* 3. Prescription Requirement Section */}
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs">
+          <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-sand-200 pb-3">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm text-gray-900 uppercase tracking-wider font-mono">
@@ -273,7 +312,7 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             {hasRxItems && (
-              <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+              <div className="p-3.5 rounded-lg bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p>
                   Your order includes regulated medications. Please attach an approved prescription. Your dispensing pharmacist will verify the doctor’s details before packing.
@@ -286,10 +325,10 @@ export const CheckoutPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setPrescriptionChoice('EXISTING')}
-                  className={`p-3.5 rounded-xl border text-left text-xs transition-colors ${
+                  className={`p-3.5 rounded-lg border text-left text-xs transition-colors ${
                     prescriptionChoice === 'EXISTING'
-                      ? 'border-pine-700 bg-sand-100 font-bold text-pine-900'
-                      : 'border-sand-300 bg-white text-gray-700'
+                      ? 'border-pine-700 bg-sand-100 font-bold text-pine-900 ring-1 ring-pine-700'
+                      : 'border-sand-300 bg-white text-gray-700 hover:border-sand-400'
                   }`}
                 >
                   <span className="block font-bold">Select Saved Prescription</span>
@@ -299,10 +338,10 @@ export const CheckoutPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setPrescriptionChoice('UPLOAD_NEW')}
-                  className={`p-3.5 rounded-xl border text-left text-xs transition-colors ${
+                  className={`p-3.5 rounded-lg border text-left text-xs transition-colors ${
                     prescriptionChoice === 'UPLOAD_NEW'
-                      ? 'border-pine-700 bg-sand-100 font-bold text-pine-900'
-                      : 'border-sand-300 bg-white text-gray-700'
+                      ? 'border-pine-700 bg-sand-100 font-bold text-pine-900 ring-1 ring-pine-700'
+                      : 'border-sand-300 bg-white text-gray-700 hover:border-sand-400'
                   }`}
                 >
                   <span className="block font-bold">Upload New Prescription</span>
@@ -317,8 +356,8 @@ export const CheckoutPage: React.FC = () => {
                     {MOCK_PRESCRIPTIONS.map((rx) => (
                       <label
                         key={rx.id}
-                        className={`p-3 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-colors ${
-                          selectedPrescriptionId === rx.id ? 'border-pine-700 bg-sand-50' : 'border-sand-300 bg-white'
+                        className={`p-3 rounded-lg border flex items-center justify-between text-xs cursor-pointer transition-colors ${
+                          selectedPrescriptionId === rx.id ? 'border-pine-700 bg-sand-50' : 'border-sand-300 bg-white hover:border-sand-400'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -345,7 +384,7 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl border-2 border-dashed border-sand-300 bg-sand-50 text-center space-y-3">
+                <div className="p-4 rounded-lg border-2 border-dashed border-sand-300 bg-sand-50 text-center space-y-3">
                   <Upload className="w-8 h-8 text-pine-700 mx-auto" />
                   <div className="text-xs text-gray-600 space-y-1">
                     <p className="font-bold text-gray-900">Upload Doctor Prescription File</p>
@@ -374,7 +413,7 @@ export const CheckoutPage: React.FC = () => {
           </div>
 
           {/* 4. Payment Method Placeholder */}
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-4 shadow-2xs">
+          <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-sand-200 pb-3">
               <h3 className="font-bold text-sm text-gray-900 uppercase tracking-wider font-mono">
                 4. Payment Method
@@ -384,8 +423,8 @@ export const CheckoutPage: React.FC = () => {
 
             <div className="space-y-3">
               <label
-                className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-colors ${
-                  paymentOption === 'ONLINE_UPI' ? 'border-pine-700 bg-sand-100 ring-1 ring-pine-700' : 'border-sand-300 bg-white'
+                className={`p-3.5 sm:p-4 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
+                  paymentOption === 'ONLINE_UPI' ? 'border-pine-700 bg-sand-100 ring-1 ring-pine-700' : 'border-sand-300 bg-white hover:border-sand-400'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -406,8 +445,8 @@ export const CheckoutPage: React.FC = () => {
               </label>
 
               <label
-                className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-colors ${
-                  paymentOption === 'CARD' ? 'border-pine-700 bg-sand-100 ring-1 ring-pine-700' : 'border-sand-300 bg-white'
+                className={`p-3.5 sm:p-4 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
+                  paymentOption === 'CARD' ? 'border-pine-700 bg-sand-100 ring-1 ring-pine-700' : 'border-sand-300 bg-white hover:border-sand-400'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -428,8 +467,8 @@ export const CheckoutPage: React.FC = () => {
               </label>
 
               <label
-                className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-colors ${
-                  paymentOption === 'COD' ? 'border-pine-700 bg-sand-100 ring-1 ring-pine-700' : 'border-sand-300 bg-white'
+                className={`p-3.5 sm:p-4 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
+                  paymentOption === 'COD' ? 'border-pine-700 bg-sand-100 ring-1 ring-pine-700' : 'border-sand-300 bg-white hover:border-sand-400'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -456,7 +495,7 @@ export const CheckoutPage: React.FC = () => {
 
         {/* Right Column: Order Summary & Place Order CTA */}
         <div className="space-y-6">
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-6 lg:sticky lg:top-24 shadow-2xs">
+          <div className="bg-white rounded-lg border border-sand-300 p-4 sm:p-6 space-y-6 lg:sticky lg:top-24 shadow-sm">
             <h3 className="font-bold text-base text-gray-900 border-b border-sand-200 pb-3">
               Order Summary
             </h3>
@@ -514,14 +553,14 @@ export const CheckoutPage: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-pine-700 hover:bg-pine-800 disabled:bg-gray-300 text-white font-semibold text-sm py-4 px-4 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 shadow-xs"
+              className="w-full bg-pine-700 hover:bg-pine-800 disabled:bg-sand-200 disabled:text-gray-400 text-white font-semibold text-sm py-3.5 sm:py-4 px-4 rounded-lg transition-colors duration-150 flex items-center justify-center gap-2 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {isSubmitting ? (
                 <span>CREATING ORDER...</span>
               ) : (
                 <>
                   <span>CONFIRM & PLACE ORDER</span>
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
                 </>
               )}
             </button>

@@ -97,7 +97,7 @@ export const MedicineDetailPage: React.FC = () => {
         {/* Left Column: Monograph, Composition, Available Pharmacies */}
         <div className="lg:col-span-2 space-y-6">
           {/* Primary Monograph Card */}
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-6">
+          <div className="bg-white rounded-lg border border-sand-300 p-5 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -116,15 +116,15 @@ export const MedicineDetailPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="w-16 h-16 rounded-2xl bg-sand-100 text-pine-700 flex items-center justify-center shrink-0">
-                <Pill className="w-8 h-8" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-sand-100 text-pine-700 flex items-center justify-center shrink-0">
+                <Pill className="w-7 h-7 sm:w-8 sm:h-8" aria-hidden="true" />
               </div>
             </div>
 
             {/* Prescription Requirement Box */}
             {medicine.prescriptionRequired ? (
-              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 flex items-start gap-3">
-                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="p-4 sm:p-5 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-900 flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="text-xs leading-relaxed space-y-1">
                   <p className="font-bold">Prescription Review Required Before Dispensing</p>
                   <p className="text-amber-800">
@@ -133,8 +133,8 @@ export const MedicineDetailPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-emerald-900 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-lg bg-emerald-50/80 border border-emerald-200 text-emerald-900 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="text-xs leading-relaxed">
                   <p className="font-bold">Over-The-Counter Medicine (OTC)</p>
                   <p className="text-emerald-800 mt-0.5">
@@ -145,7 +145,7 @@ export const MedicineDetailPage: React.FC = () => {
             )}
 
             {/* Technical Specifications / Composition Breakdown */}
-            <div className="border border-sand-300 rounded-2xl overflow-hidden text-xs">
+            <div className="border border-sand-300 rounded-lg overflow-hidden text-xs">
               <div className="bg-sand-100 px-4 py-2.5 font-bold text-gray-800 border-b border-sand-300 font-mono uppercase tracking-wider text-[11px]">
                 Technical & Composition Specifications
               </div>
@@ -183,7 +183,7 @@ export const MedicineDetailPage: React.FC = () => {
           </div>
 
           {/* Available Pharmacies / Clean Comparison List */}
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 sm:p-8 space-y-4">
+          <div className="bg-white rounded-lg border border-sand-300 p-5 sm:p-8 space-y-4">
             <div>
               <span className="font-mono text-xs uppercase tracking-wider text-pine-800 block">Branch Stock Comparison</span>
               <h3 className="text-lg font-bold text-gray-900 mt-0.5">Available Participating Pharmacies</h3>
@@ -192,7 +192,7 @@ export const MedicineDetailPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="border border-sand-300 rounded-2xl overflow-hidden divide-y divide-sand-200">
+            <div className="border border-sand-300 rounded-lg overflow-hidden divide-y divide-sand-200">
               {inventoriesForMedicine.length === 0 ? (
                 <div className="p-4 text-xs text-gray-500 text-center">
                   Currently out of stock at registered branches.
@@ -259,7 +259,7 @@ export const MedicineDetailPage: React.FC = () => {
 
         {/* Right Sticky Sidebar: Price, Quantity, Cart & Branch Actions */}
         <div className="space-y-6">
-          <div className="bg-white rounded-3xl border border-sand-300 p-6 space-y-6 lg:sticky lg:top-24 shadow-2xs">
+          <div className="bg-white rounded-lg border border-sand-300 p-5 sm:p-6 space-y-6 lg:sticky lg:top-24 shadow-sm">
             <div>
               <span className="font-mono text-[11px] uppercase tracking-wider text-gray-400 block">Dispensing Price</span>
               <div className="flex items-baseline gap-2 mt-1">
@@ -276,7 +276,7 @@ export const MedicineDetailPage: React.FC = () => {
             </div>
 
             {/* Selected Branch Fulfillment Box */}
-            <div className="p-3.5 rounded-xl bg-sand-100 border border-sand-300 text-xs space-y-2">
+            <div className="p-3.5 rounded-lg bg-sand-100 border border-sand-300 text-xs space-y-2">
               <div className="flex items-center justify-between font-mono text-[11px]">
                 <span className="text-gray-500 uppercase">Dispensing Branch:</span>
                 <span className="text-emerald-700 font-bold">
@@ -294,23 +294,23 @@ export const MedicineDetailPage: React.FC = () => {
             {/* Quantity Selector */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-gray-700">Select Quantity:</label>
-              <div className="flex items-center border border-sand-300 rounded-xl bg-white p-1 w-full justify-between">
+              <div className="flex items-center border border-sand-300 rounded-lg bg-white p-1 w-full justify-between">
                 <button
                   type="button"
                   onClick={() => setQty(Math.max(1, qty - 1))}
-                  className="w-10 h-10 rounded-lg hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors"
+                  className="w-10 h-10 rounded hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   aria-label="Decrease quantity"
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-4 h-4" aria-hidden="true" />
                 </button>
-                <span className="font-bold text-sm text-gray-900 font-mono">{qty}</span>
+                <span className="font-bold text-sm text-gray-900 font-mono" aria-live="polite">{qty}</span>
                 <button
                   type="button"
                   onClick={() => setQty(qty + 1)}
-                  className="w-10 h-10 rounded-lg hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors"
+                  className="w-10 h-10 rounded hover:bg-sand-100 flex items-center justify-center text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   aria-label="Increase quantity"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -321,7 +321,7 @@ export const MedicineDetailPage: React.FC = () => {
                 type="button"
                 onClick={handleAddToCart}
                 disabled={!inStock}
-                className="w-full bg-pine-700 hover:bg-pine-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold text-sm py-3.5 px-4 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 shadow-xs"
+                className="w-full bg-pine-700 hover:bg-pine-800 disabled:bg-sand-200 disabled:text-gray-400 text-white font-semibold text-sm py-3 px-4 rounded-lg transition-colors duration-150 flex items-center justify-center gap-2 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <span>ADD TO CART</span>
                 <span className="font-mono text-xs opacity-80">(₹{(currentPrice * qty).toFixed(2)})</span>
@@ -329,7 +329,7 @@ export const MedicineDetailPage: React.FC = () => {
 
               <Link
                 to="/customer/pharmacies"
-                className="w-full block text-center border border-sand-300 hover:border-gray-400 text-gray-700 font-semibold text-xs py-3 px-4 rounded-xl transition-colors"
+                className="w-full block text-center border border-sand-300 hover:border-sand-400 hover:bg-sand-50 text-gray-700 font-semibold text-xs py-2.5 px-4 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 VIEW PHARMACY DETAILS
               </Link>

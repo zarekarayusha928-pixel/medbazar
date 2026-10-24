@@ -16,6 +16,10 @@ export interface User {
   phone: string;
   role: UserRole;
   avatarUrl?: string;
+  pharmacyId?: string;
+  pharmacyName?: string;
+  branchId?: string;
+  branchName?: string;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
 }
@@ -25,12 +29,51 @@ export interface Pharmacy {
   name: string;
   legalName: string;
   licenseNumber: string;
+  gstNumber?: string;
   phone: string;
   email: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   status: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
   logoUrl?: string;
   branchCount: number;
   createdAt: string;
+  verifiedAt?: string;
+}
+
+export interface PharmacyActivity {
+  id: string;
+  pharmacyId: string;
+  type: 'ONBOARDING' | 'VERIFICATION' | 'STATUS_CHANGE' | 'BRANCH_ADDED' | 'STAFF_ADDED' | 'ORDER' | 'SETTING_UPDATE';
+  title: string;
+  description: string;
+  actor: string;
+  timestamp: string;
+}
+
+export interface PlatformSettings {
+  platformName: string;
+  supportEmail: string;
+  supportPhone: string;
+  defaultCurrency: string;
+  timezone: string;
+  maintenanceMode: boolean;
+  commissionRate: number;
+  deliveryFeeBase: number;
+  minimumOrderValue: number;
+  payoutCycle: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+  drugRegulatoryAuthorityId: string;
+  requireDigitalRxVerification: boolean;
+  require2FAForOwners: boolean;
+  rxRecordRetentionYears: number;
+  smsGatewayEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+  dispatchAlertsEnabled: boolean;
 }
 
 export interface Branch {
@@ -113,9 +156,10 @@ export interface StockMovement {
     | 'TRANSFER_OUT'
     | 'EXPIRY';
   quantity: number;
-  referenceType?: 'ORDER' | 'POS_SALE' | 'PURCHASE_ORDER' | 'ADJUSTMENT';
+  referenceType?: 'ORDER' | 'POS_SALE' | 'PURCHASE_ORDER' | 'ADJUSTMENT' | 'TRANSFER';
   referenceId?: string;
-  createdBy: string;
+  notes?: string;
+  createdBy?: string;
   createdAt: string;
 }
 
@@ -248,6 +292,19 @@ export interface Staff {
   joinedAt: string;
 }
 
+export interface Supplier {
+  id: string;
+  organizationId: string;
+  name: string;
+  contactPerson?: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  gstNumber?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface PurchaseOrder {
   id: string;
   purchaseNumber: string;
@@ -276,5 +333,110 @@ export interface DeliveryAssignment {
   status: 'ASSIGNED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'FAILED';
   assignedTime: string;
   completedTime?: string;
+}
+
+// Aliases matching domain vocabulary
+export type Role = UserRole;
+export type Organization = Pharmacy;
+export type Batch = InventoryBatch;
+export type POSSale = PosSale;
+export type POSSaleItem = PosSaleItem;
+export type Delivery = DeliveryAssignment;
+
+// Payment domain model
+export interface Payment {
+  id: string;
+  orderId?: string;
+  posSaleId?: string;
+  amount: number;
+  currency: string;
+  method: 'ONLINE' | 'COD' | 'UPI' | 'CASH' | 'CARD';
+  status: PaymentStatus;
+  transactionRef?: string;
+  gatewayName?: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
+// Notification domain model
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
+  read: boolean;
+  linkUrl?: string;
+  createdAt: string;
+}
+
+// Analytics and reporting domain model
+export interface ReportSummary {
+  period: '30d' | '90d' | 'ytd';
+  totalGmv: number;
+  totalOrders: number;
+  totalRevenue: number;
+  platformCommissions: number;
+  netPayouts: number;
+}
+
+export interface ReportSalesTrend {
+  month: string;
+  gmv: number;
+  orders: number;
+}
+
+export interface ReportPharmacyPerformance {
+  id: string;
+  pharmacyName: string;
+  branchCount: number;
+  totalOrders: number;
+  gmv: number;
+  platformCommission: number;
+  netPayout: number;
+}
+
+export interface ReportMedicineDemand {
+  id: string;
+  name: string;
+  unitsSold: number;
+  revenue: number;
+}
+
+export interface Report {
+  id: string;
+  period: '30d' | '90d' | 'ytd';
+  generatedAt: string;
+  summary: ReportSummary;
+  salesTrend: ReportSalesTrend[];
+  pharmacyPerformance: ReportPharmacyPerformance[];
+  medicineDemand: ReportMedicineDemand[];
+}
+
+// Generic API response envelopes
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  timestamp: string;
+}
+
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  timestamp: string;
+}
+
+export interface ApiErrorData {
+  message: string;
+  code?: string;
+  statusCode?: number;
+  errors?: Record<string, string[]>;
 }
 

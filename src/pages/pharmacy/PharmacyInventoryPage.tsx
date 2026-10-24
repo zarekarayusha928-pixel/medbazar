@@ -1,14 +1,23 @@
-import React, { useState } from 'react';
-import { Package, Search, Plus, Edit2, AlertTriangle, ArrowUpDown, Filter } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Package, Search, Plus, Edit2, AlertTriangle, ArrowUpDown, Filter, Loader2, RefreshCw, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { MOCK_INVENTORY, MOCK_CATEGORIES, MOCK_BRANCHES } from '@/services/api/mockData';
-import { Inventory } from '@/types';
+import { inventoryApi } from '@/services/api/inventoryApi';
+import { medicineApi } from '@/services/api/medicineApi';
+import { pharmacyApi } from '@/services/api/pharmacyApi';
+import { Inventory, Category, Branch } from '@/types';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 export const PharmacyInventoryPage: React.FC = () => {
   const { showToast } = useToast();
-  const [inventory, setInventory] = useState<Inventory[]>(MOCK_INVENTORY);
+  const [inventory, setInventory] = useState<Inventory[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [search, setSearch] = useState('');
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -19,6 +28,7 @@ export const PharmacyInventoryPage: React.FC = () => {
   const [editingItem, setEditingItem] = useState<Inventory | null>(null);
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState('Audit Correction');
+  const [isAdjusting, setIsAdjusting] = useState(false);
 
   // Add batch modal
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false);
@@ -27,12 +37,45 @@ export const PharmacyInventoryPage: React.FC = () => {
   const [newExpiry, setNewExpiry] = useState('2028-06-30');
   const [newQuantity, setNewQuantity] = useState(100);
   const [newPrice, setNewPrice] = useState(30.00);
+  const [isAddingBatch, setIsAddingBatch] = useState(false);
+
+  // Transfer stock modal
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [transferItem, setTransferItem] = useState<Inventory | null>(null);
+  const [destBranchId, setDestBranchId] = useState('');
+  const [transferQuantity, setTransferQuantity] = useState(10);
+  const [transferNotes, setTransferNotes] = useState('Inter-branch stock rebalancing');
+  const [isTransferring, setIsTransferring] = useState(false);
+
+  // Load Inventory data from API
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const [invData, catData, branchData] = await Promise.all([
+        inventoryApi.getInventory(),
+        medicineApi.getCategories().catch(() => []),
+        pharmacyApi.getBranches().catch(() => []),
+      ]);
+      setInventory(invData);
+      setCategories(catData);
+      setBranches(branchData);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load branch inventory. Please verify your connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Helper to check if expiring soon (< 90 days)
   const isExpiringSoon = (item: Inventory) => {
     const expStr = item.batches?.[0]?.expiryDate || '2027-08-31';
     const expDate = new Date(expStr).getTime();
-    const now = new Date('2026-10-13').getTime();
+    const now = Date.now();
     const diffDays = (expDate - now) / (1000 * 3600 * 24);
     return diffDays > 0 && diffDays <= 90;
   };
@@ -83,71 +126,137 @@ export const PharmacyInventoryPage: React.FC = () => {
     return true;
   });
 
-  const handleSaveAdjustment = () => {
+  const handleSaveAdjustment = async () => {
     if (!editingItem) return;
     const q = Number(adjustQty);
-    const updated = inventory.map((item) => {
-      if (item.id === editingItem.id) {
-        return {
-          ...item,
-          quantity: q,
-          status: (q === 0 ? 'OUT_OF_STOCK' : q <= item.reorderLevel ? 'LOW_STOCK' : 'IN_STOCK') as any
-        };
-      }
-      return item;
-    });
+    if (q < 0) {
+      showToast('Validation Error', 'Stock quantity cannot be negative.', 'error');
+      return;
+    }
 
-    setInventory(updated);
-    showToast(
-      'Inventory Updated',
-      `Adjusted ${editingItem.medicine?.name} stock to ${q} units (${adjustReason}). Logged in stock movements.`,
-      'success'
-    );
-    setEditingItem(null);
+    try {
+      setIsAdjusting(true);
+      const updatedItem = await inventoryApi.adjustStock(editingItem.id, q, adjustReason);
+
+      setInventory((prev) =>
+        prev.map((item) => (item.id === editingItem.id ? { ...item, ...updatedItem } : item))
+      );
+      showToast(
+        'Inventory Updated',
+        `Adjusted ${editingItem.medicine?.name} stock to ${q} units (${adjustReason}). Logged in stock movements.`,
+        'success'
+      );
+      setEditingItem(null);
+    } catch (err: any) {
+      showToast('Adjustment Failed', err.message || 'Could not adjust stock.', 'error');
+    } finally {
+      setIsAdjusting(false);
+    }
   };
 
-  const handleAddBatchSubmit = (e: React.FormEvent) => {
+  const handleAddBatchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newItem: Inventory = {
-      id: `inv_${Date.now()}`,
-      organizationId: 'pharm_1',
-      branchId: branchFilter !== 'ALL' ? branchFilter : 'branch_1',
-      branchName: 'Apothecary Main Branch - Pune Station',
-      medicineId: 'med_1',
-      medicine: {
-        id: 'med_1',
-        name: newMedicineName,
-        genericName: 'Paracetamol',
-        brand: 'Direct Batch',
-        composition: '500mg',
-        dosageForm: 'TABLET',
-        strength: '500mg',
-        categoryId: 'cat_pain',
-        prescriptionRequired: false,
-        manufacturer: 'Pharma Lab',
-        status: 'ACTIVE'
-      },
-      quantity: Number(newQuantity),
-      reorderLevel: 20,
-      sellingPrice: Number(newPrice),
-      mrp: Number(newPrice) * 1.15,
-      status: 'IN_STOCK',
-      batches: [
-        {
-          id: `bch_${Date.now()}`,
-          inventoryId: `inv_${Date.now()}`,
+    try {
+      setIsAddingBatch(true);
+      // If there's an existing item for this medicine, add batch to it
+      const targetItem = inventory.find(
+        (i) =>
+          i.medicine?.name.toLowerCase() === newMedicineName.toLowerCase() ||
+          (branchFilter !== 'ALL' && i.branchId === branchFilter)
+      ) || inventory[0];
+
+      if (targetItem) {
+        const updated = await inventoryApi.addBatch(targetItem.id, {
           batchNumber: newBatchNo,
           expiryDate: newExpiry,
           quantity: Number(newQuantity),
-          purchasePrice: Number(newPrice) * 0.75
-        }
-      ],
-      updatedAt: new Date().toISOString()
-    };
+          purchasePrice: Number(newPrice) * 0.75,
+        });
+        setInventory((prev) =>
+          prev.map((item) => (item.id === targetItem.id ? { ...item, ...updated } : item))
+        );
+      } else {
+        // Mock fallback insertion
+        const newItem: Inventory = {
+          id: `inv_${Date.now()}`,
+          organizationId: 'pharm_1',
+          branchId: branchFilter !== 'ALL' ? branchFilter : (branches[0]?.id || 'br_1'),
+          branchName: branches[0]?.name || 'Apothecary Main Branch',
+          medicineId: 'med_1',
+          medicine: {
+            id: 'med_1',
+            name: newMedicineName,
+            genericName: 'Paracetamol',
+            brand: 'Direct Batch',
+            composition: '500mg',
+            dosageForm: 'TABLET',
+            strength: '500mg',
+            categoryId: categories[0]?.id || 'cat_pain',
+            prescriptionRequired: false,
+            manufacturer: 'Pharma Lab',
+            status: 'ACTIVE',
+          },
+          quantity: Number(newQuantity),
+          reorderLevel: 20,
+          sellingPrice: Number(newPrice),
+          mrp: Number(newPrice) * 1.15,
+          status: 'IN_STOCK',
+          batches: [
+            {
+              id: `bch_${Date.now()}`,
+              inventoryId: `inv_${Date.now()}`,
+              batchNumber: newBatchNo,
+              expiryDate: newExpiry,
+              quantity: Number(newQuantity),
+              purchasePrice: Number(newPrice) * 0.75,
+            },
+          ],
+          updatedAt: new Date().toISOString(),
+        };
+        setInventory([newItem, ...inventory]);
+      }
 
-    setInventory([newItem, ...inventory]);
-    showToast('Batch Registered', `Batch ${newBatchNo} added to branch stock.`, 'success');
-    setIsAddBatchOpen(false);
+      showToast('Batch Registered', `Batch ${newBatchNo} added to branch stock.`, 'success');
+      setIsAddBatchOpen(false);
+    } catch (err: any) {
+      showToast('Error', err.message || 'Failed to add batch.', 'error');
+    } finally {
+      setIsAddingBatch(false);
+    }
+  };
+
+  const handleExecuteTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferItem || !destBranchId) return;
+
+    if (transferItem.branchId === destBranchId) {
+      showToast('Validation Error', 'Source and destination branches must be different.', 'error');
+      return;
+    }
+
+    try {
+      setIsTransferring(true);
+      await inventoryApi.transferStock({
+        sourceBranchId: transferItem.branchId,
+        destinationBranchId: destBranchId,
+        medicineId: transferItem.medicineId,
+        quantity: Number(transferQuantity),
+        notes: transferNotes,
+      });
+
+      showToast(
+        'Stock Transferred',
+        `Successfully transferred ${transferQuantity} units of ${transferItem.medicine?.name}.`,
+        'success'
+      );
+      setIsTransferOpen(false);
+      setTransferItem(null);
+      await loadData();
+    } catch (err: any) {
+      showToast('Transfer Failed', err.message || 'Failed to execute transfer.', 'error');
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   const renderStateBadge = (state: ReturnType<typeof getComputedState>) => {
@@ -162,6 +271,26 @@ export const PharmacyInventoryPage: React.FC = () => {
         return <Badge variant="warning" size="sm">Expiring</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="py-12">
+        <LoadingState message="Loading branch stock and inventory..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="py-12">
+        <ErrorState
+          title="Inventory Sync Error"
+          message={error}
+          onRetry={loadData}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 font-sans text-gray-900">
@@ -181,40 +310,56 @@ export const PharmacyInventoryPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsAddBatchOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-2xs"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Add Stock Batch</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={loadData}
+            title="Refresh Inventory"
+            className="p-1.5 rounded border border-sand-300 text-gray-600 hover:text-pine-800 hover:bg-sand-100 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAddBatchOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Stock Batch</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar: branch, category, stock, expiry, search */}
-      <div className="bg-white border border-sand-300 rounded-md p-3 space-y-2.5 shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md p-3 space-y-2.5 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs">
           {/* Search */}
           <div className="relative lg:col-span-1">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" aria-hidden="true" />
+            <label htmlFor="inventory-search" className="sr-only">Search inventory</label>
             <input
+              id="inventory-search"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search medicine, batch..."
-              className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+              aria-label="Search medicine name, brand, or batch number"
+              className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
             />
           </div>
 
           {/* Branch Filter */}
           <div>
+            <label htmlFor="inventory-branch-filter" className="sr-only">Filter by branch</label>
             <select
+              id="inventory-branch-filter"
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter inventory by branch"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <option value="ALL">All Branches</option>
-              {MOCK_BRANCHES.map(b => (
+              {branches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name.split('-')[1]?.trim() || b.name}</option>
               ))}
             </select>
@@ -222,13 +367,16 @@ export const PharmacyInventoryPage: React.FC = () => {
 
           {/* Category Filter */}
           <div>
+            <label htmlFor="inventory-category-filter" className="sr-only">Filter by category</label>
             <select
+              id="inventory-category-filter"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter inventory by category"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <option value="ALL">All Categories</option>
-              {MOCK_CATEGORIES.map(c => (
+              {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
@@ -236,10 +384,13 @@ export const PharmacyInventoryPage: React.FC = () => {
 
           {/* Stock Filter (In Stock, Low Stock, Out of Stock) */}
           <div>
+            <label htmlFor="inventory-stock-filter" className="sr-only">Filter by stock level</label>
             <select
+              id="inventory-stock-filter"
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter inventory by stock level"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <option value="ALL">All Stock Levels</option>
               <option value="IN_STOCK">In Stock</option>
@@ -250,21 +401,24 @@ export const PharmacyInventoryPage: React.FC = () => {
 
           {/* Expiry Filter (Expiring, Valid) */}
           <div>
+            <label htmlFor="inventory-expiry-filter" className="sr-only">Filter by expiry date</label>
             <select
+              id="inventory-expiry-filter"
               value={expiryFilter}
               onChange={(e) => setExpiryFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter inventory by expiry date"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <option value="ALL">All Expiry Dates</option>
-              <option value="EXPIRING">Expiring Soon (&lt;90 days)</option>
-              <option value="VALID">Valid Shelf Life (&gt;90 days)</option>
+              <option value="EXPIRING">Expiring &lt; 90 Days</option>
+              <option value="VALID">Valid Shelf Life</option>
             </select>
           </div>
         </div>
       </div>
 
       {/* Table: Medicine, Batch, Branch, Stock, Reorder Level, Expiry, Price, Status */}
-      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -320,12 +474,12 @@ export const PharmacyInventoryPage: React.FC = () => {
 
                       {/* Expiry */}
                       <td className="py-2.5 px-3 font-mono text-[11px] text-gray-700">
-                        {item.batches?.[0]?.expiryDate || '2027-08-31'}
+                        {item.batches?.[0]?.expiryDate?.split('T')[0] || '2027-08-31'}
                       </td>
 
                       {/* Price */}
                       <td className="py-2.5 px-3 font-mono font-bold text-gray-900">
-                        ₹{item.sellingPrice.toFixed(2)}
+                        ₹{Number(item.sellingPrice).toFixed(2)}
                       </td>
 
                       {/* Status */}
@@ -335,16 +489,33 @@ export const PharmacyInventoryPage: React.FC = () => {
 
                       {/* Action */}
                       <td className="py-2.5 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingItem(item);
-                            setAdjustQty(item.quantity);
-                          }}
-                          className="px-2.5 py-1 rounded bg-sand-100 hover:bg-sand-200 border border-sand-300 text-pine-800 font-semibold text-xs transition-colors"
-                        >
-                          Adjust
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransferItem(item);
+                              const other = branches.find((b) => b.id !== item.branchId);
+                              setDestBranchId(other?.id || '');
+                              setTransferQuantity(Math.min(10, item.quantity));
+                              setIsTransferOpen(true);
+                            }}
+                            title="Transfer stock to another branch"
+                            className="px-2 py-1 rounded bg-sand-50 hover:bg-sand-200 border border-sand-300 text-gray-700 font-semibold text-xs transition-colors inline-flex items-center gap-1"
+                          >
+                            <ArrowRightLeft className="w-3 h-3 text-pine-700" />
+                            <span>Transfer</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingItem(item);
+                              setAdjustQty(item.quantity);
+                            }}
+                            className="px-2.5 py-1 rounded bg-sand-100 hover:bg-sand-200 border border-sand-300 text-pine-800 font-semibold text-xs transition-colors"
+                          >
+                            Adjust
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -374,9 +545,11 @@ export const PharmacyInventoryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSaveAdjustment}
-                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold"
+                disabled={isAdjusting}
+                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50"
               >
-                Save Adjustment
+                {isAdjusting && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>Save Adjustment</span>
               </button>
             </div>
           }
@@ -388,6 +561,7 @@ export const PharmacyInventoryPage: React.FC = () => {
                 type="number"
                 value={adjustQty}
                 onChange={(e) => setAdjustQty(Number(e.target.value))}
+                min={0}
                 className="w-full p-2 border border-sand-300 rounded text-xs bg-white text-gray-900 font-mono focus:outline-none focus:border-pine-700"
               />
               <span className="text-[10px] text-gray-500 font-mono">Current system count: {editingItem.quantity} units</span>
@@ -429,9 +603,11 @@ export const PharmacyInventoryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleAddBatchSubmit}
-                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold"
+                disabled={isAddingBatch}
+                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50"
               >
-                Register Batch
+                {isAddingBatch && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>Register Batch</span>
               </button>
             </div>
           }
@@ -478,6 +654,7 @@ export const PharmacyInventoryPage: React.FC = () => {
                   type="number"
                   value={newQuantity}
                   onChange={(e) => setNewQuantity(Number(e.target.value))}
+                  min={1}
                   className="w-full p-2 border border-sand-300 rounded text-xs bg-white text-gray-900 font-mono focus:outline-none focus:border-pine-700"
                   required
                 />
@@ -488,10 +665,90 @@ export const PharmacyInventoryPage: React.FC = () => {
                   type="number"
                   value={newPrice}
                   onChange={(e) => setNewPrice(Number(e.target.value))}
+                  min={0.01}
+                  step="0.01"
                   className="w-full p-2 border border-sand-300 rounded text-xs bg-white text-gray-900 font-mono focus:outline-none focus:border-pine-700"
                   required
                 />
               </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Transfer Stock Modal */}
+      {isTransferOpen && transferItem && (
+        <Modal
+          isOpen={true}
+          onClose={() => setIsTransferOpen(false)}
+          title={`Inter-Branch Transfer: ${transferItem.medicine?.name}`}
+          size="md"
+          footer={
+            <div className="flex justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setIsTransferOpen(false)}
+                className="px-3 py-1.5 rounded border border-sand-300 text-xs text-gray-700 bg-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteTransfer}
+                disabled={isTransferring}
+                className="px-3 py-1.5 rounded bg-pine-700 hover:bg-pine-800 text-white text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                {isTransferring && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>Execute Transfer</span>
+              </button>
+            </div>
+          }
+        >
+          <form onSubmit={handleExecuteTransfer} className="space-y-3 text-xs">
+            <div className="p-2.5 bg-sand-50 rounded border border-sand-200">
+              <div className="font-semibold text-gray-800">Source Stock Available: {transferItem.quantity} units</div>
+              <div className="text-[11px] text-gray-500">Source Branch: {transferItem.branchName || transferItem.branchId}</div>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-1">Destination Branch</label>
+              <select
+                value={destBranchId}
+                onChange={(e) => setDestBranchId(e.target.value)}
+                className="w-full p-2 border border-sand-300 rounded text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+                required
+              >
+                <option value="">Select receiving branch...</option>
+                {branches
+                  .filter((b) => b.id !== transferItem.branchId)
+                  .map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-1">Transfer Quantity (units)</label>
+              <input
+                type="number"
+                value={transferQuantity}
+                onChange={(e) => setTransferQuantity(Number(e.target.value))}
+                min={1}
+                max={transferItem.quantity}
+                className="w-full p-2 border border-sand-300 rounded text-xs bg-white text-gray-900 font-mono focus:outline-none focus:border-pine-700"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-1">Transfer Reason / Audit Notes</label>
+              <input
+                type="text"
+                value={transferNotes}
+                onChange={(e) => setTransferNotes(e.target.value)}
+                className="w-full p-2 border border-sand-300 rounded text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+                required
+              />
             </div>
           </form>
         </Modal>

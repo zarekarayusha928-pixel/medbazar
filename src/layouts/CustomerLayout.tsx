@@ -18,6 +18,7 @@ import {
 import { MOCK_BRANCHES } from '@/services/api/mockData';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
+import { MockModeToggle } from '@/components/ui/MockModeToggle';
 
 export const CustomerLayout: React.FC = () => {
   const location = useLocation();
@@ -53,12 +54,20 @@ export const CustomerLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-sand-50 text-gray-900 font-sans antialiased">
+      {/* Accessible skip link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:shadow-sm font-semibold text-xs focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       {/* Platform Context Utility Bar */}
       <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-mono text-[11px] text-slate-400">
+            <span className="font-mono text-[11px] text-slate-400 truncate max-w-[260px] sm:max-w-none">
               Verified Healthcare Marketplace • Real-Time Branch Inventory
             </span>
           </div>
@@ -76,18 +85,18 @@ export const CustomerLayout: React.FC = () => {
       </div>
 
       {/* Main Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3 sm:gap-6">
+      <header className="bg-white border-b border-sand-300 sticky top-0 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2 sm:gap-6">
           {/* Logo / Med Bazar Wordmark */}
-          <Link to="/customer" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-2xs group-hover:bg-brand-700 transition-colors duration-150">
-              <Pill className="w-5 h-5" />
+          <Link to="/customer" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-brand-600 flex items-center justify-center text-white shadow-sm group-hover:bg-brand-700 transition-colors duration-150">
+              <Pill className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
             </div>
             <div>
-              <span className="text-xl font-extrabold text-gray-900 tracking-tight block leading-none">
+              <span className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight block leading-none">
                 Med<span className="text-brand-600">Bazar</span>
               </span>
-              <span className="text-[10px] text-gray-500 font-mono tracking-wider uppercase block mt-0.5">
+              <span className="hidden sm:block text-[9px] sm:text-[10px] text-gray-500 font-mono tracking-wider uppercase mt-0.5">
                 Pharmacy Marketplace
               </span>
             </div>
@@ -97,20 +106,23 @@ export const CustomerLayout: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50/80 hover:bg-gray-100 hover:border-gray-300 transition-colors duration-150 text-left"
+              aria-label={`Selected dispensing branch: ${selectedBranch.name}. Click to change.`}
+              aria-expanded={locationDropdownOpen}
+              aria-haspopup="listbox"
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border border-sand-300 bg-sand-50/80 hover:bg-sand-100 hover:border-sand-400 transition-colors duration-150 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               title="Change dispensing branch location"
             >
-              <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+              <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" aria-hidden="true" />
               <div className="hidden sm:block text-xs leading-tight">
                 <span className="text-[10px] text-gray-400 block font-mono uppercase">Branch:</span>
                 <span className="font-semibold text-gray-800 line-clamp-1 max-w-[130px]">
                   {selectedBranch.city} - {selectedBranch.name.split('-')[1] || selectedBranch.name}
                 </span>
               </div>
-              <span className="sm:hidden text-xs font-semibold text-gray-800 line-clamp-1 max-w-[80px]">
+              <span className="sm:hidden text-xs font-semibold text-gray-800 line-clamp-1 max-w-[70px]">
                 {selectedBranch.city}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" aria-hidden="true" />
             </button>
 
             {locationDropdownOpen && (
@@ -118,12 +130,13 @@ export const CustomerLayout: React.FC = () => {
                 <div
                   className="fixed inset-0 z-20"
                   onClick={() => setLocationDropdownOpen(false)}
+                  aria-hidden="true"
                 />
-                <div className="absolute left-0 mt-1.5 w-72 rounded-xl bg-white border border-gray-200 shadow-lg py-2 z-30 text-xs">
-                  <div className="px-3 py-1.5 border-b border-gray-100 text-gray-500 font-mono text-[10px] uppercase font-semibold">
+                <div className="absolute left-0 mt-1.5 w-[calc(100vw-2rem)] sm:w-72 max-w-xs sm:max-w-none rounded-lg bg-white border border-sand-300 shadow-md py-2 z-30 text-xs">
+                  <div className="px-3 py-1.5 border-b border-sand-200 text-gray-500 font-mono text-[10px] uppercase font-semibold">
                     Select Participating Branch
                   </div>
-                  <div className="max-h-60 overflow-y-auto divide-y divide-gray-50">
+                  <div className="max-h-60 overflow-y-auto divide-y divide-sand-100">
                     {MOCK_BRANCHES.map((b) => {
                       const isSelected = b.id === selectedBranch.id;
                       return (
@@ -134,7 +147,7 @@ export const CustomerLayout: React.FC = () => {
                             setLocationDropdownOpen(false);
                           }}
                           className={clsx(
-                            'w-full text-left px-3 py-2.5 hover:bg-gray-50 flex items-start justify-between gap-2 transition-colors duration-150',
+                            'w-full text-left px-3 py-2.5 hover:bg-sand-50 flex items-start justify-between gap-2 transition-colors duration-150 focus:outline-none focus-visible:bg-sand-100',
                             isSelected && 'bg-teal-50/60'
                           )}
                         >
@@ -145,7 +158,7 @@ export const CustomerLayout: React.FC = () => {
                               Open: {b.operatingHours || 'Standard hours'}
                             </span>
                           </div>
-                          {isSelected && <Check className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />}
+                          {isSelected && <Check className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" aria-hidden="true" />}
                         </button>
                       );
                     })}
@@ -156,18 +169,21 @@ export const CustomerLayout: React.FC = () => {
           </div>
 
           {/* Medicine Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-1 max-w-md relative">
+          <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-1 max-w-md relative" role="search">
+            <label htmlFor="desktop-medicine-search" className="sr-only">Search medicines</label>
             <input
+              id="desktop-medicine-search"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search medicines, composition, or brand..."
-              className="w-full pl-9 pr-20 py-2 rounded-full border border-gray-300 text-xs font-sans bg-gray-50/70 hover:border-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-500 transition-all duration-150"
+              aria-label="Search medicines, composition, or brand"
+              className="w-full pl-9 pr-20 py-2 rounded-full border border-sand-300 text-xs font-sans bg-sand-50/70 hover:border-sand-400 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 transition-all duration-150"
             />
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" aria-hidden="true" />
             <button
               type="submit"
-              className="absolute right-1 top-1 bottom-1 px-3 bg-brand-600 text-white rounded-full text-xs font-semibold hover:bg-brand-700 transition-colors duration-150"
+              className="absolute right-1 top-1 bottom-1 px-3 bg-brand-600 text-white rounded-full text-xs font-semibold hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors duration-150"
             >
               Search
             </button>
@@ -192,7 +208,7 @@ export const CustomerLayout: React.FC = () => {
             {/* Cart Button */}
             <Link
               to="/customer/cart"
-              className="relative p-2 sm:px-3 sm:py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors duration-150 flex items-center gap-2"
+              className="relative p-2 sm:px-3 sm:py-1.5 rounded-lg border border-sand-300 text-gray-700 hover:bg-sand-50 hover:border-sand-400 transition-colors duration-150 flex items-center gap-2"
               title="Shopping Cart"
             >
               <ShoppingBag className="w-4 h-4 text-gray-700 shrink-0" />
@@ -211,7 +227,7 @@ export const CustomerLayout: React.FC = () => {
                 'hidden sm:flex items-center gap-2 pl-2 pr-3 py-1 border rounded-full transition-colors duration-150 text-xs font-medium',
                 isLinkActive('/customer/profile')
                   ? 'border-brand-300 bg-teal-50 text-brand-800'
-                  : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                  : 'border-sand-300 bg-white hover:bg-sand-50 text-gray-700'
               )}
             >
               <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-[10px]">
@@ -223,51 +239,59 @@ export const CustomerLayout: React.FC = () => {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle navigation menu"
-              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 border border-gray-200"
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation-drawer"
+              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-sand-100 border border-sand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
             </button>
           </div>
         </div>
 
         {/* Secondary Navigation - Clean and Restrained */}
-        <div className="border-t border-gray-100 bg-white hidden md:block">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-7 text-xs">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const active = isLinkActive(link.path, link.exact);
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={clsx(
-                    'py-2.5 flex items-center gap-2 font-medium border-b-2 transition-colors duration-150',
-                    active
-                      ? 'border-brand-600 text-brand-700 font-semibold'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
+        <nav className="border-t border-sand-200 bg-white hidden md:block" aria-label="Main Navigation">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-7">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                const active = isLinkActive(link.path, link.exact);
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={clsx(
+                      'py-2.5 flex items-center gap-2 font-medium border-b-2 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+                      active
+                        ? 'border-brand-600 text-brand-700 font-semibold'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-sand-300'
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>{link.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+            <MockModeToggle />
           </div>
-        </div>
+        </nav>
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white px-4 py-3 space-y-3">
-            <form onSubmit={handleSearchSubmit} className="relative">
+          <div id="mobile-navigation-drawer" className="md:hidden border-t border-sand-200 bg-white px-4 py-3 space-y-3" role="region" aria-label="Mobile Navigation">
+            <form onSubmit={handleSearchSubmit} className="relative" role="search">
+              <label htmlFor="mobile-medicine-search" className="sr-only">Search medicines</label>
               <input
+                id="mobile-medicine-search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search medicines..."
-                className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 text-xs font-sans"
+                aria-label="Search medicines"
+                className="w-full pl-9 pr-4 py-2 rounded-lg border border-sand-300 text-xs font-sans focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               />
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" aria-hidden="true" />
             </form>
 
             <div className="grid grid-cols-2 gap-1.5 pt-1">
@@ -281,17 +305,17 @@ export const CustomerLayout: React.FC = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className={clsx(
                       'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors duration-150',
-                      active ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                      active ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-gray-700 hover:bg-sand-100'
                     )}
                   >
-                    <Icon className="w-4 h-4 text-gray-500" />
+                    <Icon className="w-4 h-4 text-gray-500" aria-hidden="true" />
                     <span>{link.label}</span>
                   </Link>
                 );
               })}
             </div>
 
-            <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+            <div className="pt-2 border-t border-sand-200 flex items-center justify-between text-xs">
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
@@ -312,12 +336,12 @@ export const CustomerLayout: React.FC = () => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 mb-16 md:mb-6">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 mb-16 md:mb-6 focus:outline-none">
         <Outlet />
       </main>
 
       {/* Mobile Bottom Navigation Bar (Thumb Friendly) */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-30 px-3 py-2 shadow-lg">
+      <nav aria-label="Mobile Quick Navigation" className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-sm border-t border-sand-300 z-30 px-3 py-1.5 shadow-sm">
         <div className="grid grid-cols-5 gap-1 text-center">
           <Link
             to="/customer"
@@ -375,7 +399,7 @@ export const CustomerLayout: React.FC = () => {
             <span>Account</span>
           </Link>
         </div>
-      </div>
+      </nav>
 
       {/* Footer */}
       <footer className="bg-slate-950 text-slate-400 border-t border-slate-900 text-xs py-10 mt-12">

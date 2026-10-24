@@ -37,27 +37,34 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ToastContext.Provider value={{ showToast, removeToast }}>
       {children}
       {/* Toast Container */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+      <div
+        className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 flex flex-col gap-2 pointer-events-none"
+        role="region"
+        aria-live="polite"
+        aria-label="Notification alerts"
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-start gap-3 p-4 bg-white rounded-xl shadow-lg border border-gray-100 transition-all animate-in slide-in-from-bottom-2 duration-200"
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            className="pointer-events-auto flex items-start gap-3 p-3.5 bg-white rounded-lg shadow-sm border border-sand-300 transition-all duration-150"
           >
-            {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />}
-            {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 text-sky-500 shrink-0 mt-0.5" />}
+            {toast.type === 'success' && <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />}
+            {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />}
+            {toast.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />}
+            {toast.type === 'info' && <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" aria-hidden="true" />}
 
             <div className="flex-1">
-              <h4 className="text-sm font-semibold text-gray-900">{toast.title}</h4>
-              {toast.message && <p className="text-xs text-gray-500 mt-0.5">{toast.message}</p>}
+              <h4 className="text-xs font-semibold text-gray-900">{toast.title}</h4>
+              {toast.message && <p className="text-xs text-gray-600 mt-0.5">{toast.message}</p>}
             </div>
 
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-gray-400 hover:text-gray-600 rounded-lg p-0.5"
+              aria-label="Dismiss notification"
+              className="text-gray-400 hover:text-gray-600 rounded p-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         ))}

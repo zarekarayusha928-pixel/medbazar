@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, Search, CheckCircle2, Clock, UserCheck, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { MOCK_DELIVERIES, MOCK_STAFF } from '@/services/api/mockData';
+import { deliveryApi } from '@/services/api/deliveryApi';
 import { DeliveryAssignment } from '@/types';
 
 export const PharmacyDeliveriesPage: React.FC = () => {
@@ -11,6 +12,16 @@ export const PharmacyDeliveriesPage: React.FC = () => {
   const [deliveries, setDeliveries] = useState<DeliveryAssignment[]>(MOCK_DELIVERIES);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  useEffect(() => {
+    deliveryApi.getDeliveries().then((list) => {
+      if (list && list.length > 0) {
+        setDeliveries(list);
+      }
+    }).catch(() => {
+      // Fallback to initial state
+    });
+  }, []);
 
   // Staff members eligible for delivery
   const deliveryAgents = MOCK_STAFF.filter(s => s.role === 'DELIVERY_STAFF' || s.role === 'CASHIER');
@@ -34,7 +45,12 @@ export const PharmacyDeliveriesPage: React.FC = () => {
     return true;
   });
 
-  const handleUpdateStatus = (id: string, nextStatus: DeliveryAssignment['status']) => {
+  const handleUpdateStatus = async (id: string, nextStatus: DeliveryAssignment['status']) => {
+    try {
+      await deliveryApi.updateDeliveryStatus(id, nextStatus);
+    } catch (_err) {
+      // Allow optimistic fallback
+    }
     const updated = deliveries.map(d =>
       d.id === id
         ? {
@@ -93,24 +109,30 @@ export const PharmacyDeliveriesPage: React.FC = () => {
       </div>
 
       {/* Filter toolbar */}
-      <div className="bg-white border border-sand-300 rounded-md p-3 shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md p-3 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg text-xs">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" aria-hidden="true" />
+            <label htmlFor="deliveries-search" className="sr-only">Search deliveries</label>
             <input
+              id="deliveries-search"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by Order #, customer, staff..."
-              className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+              aria-label="Search by Order number, customer, or staff"
+              className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
             />
           </div>
 
           <div>
+            <label htmlFor="deliveries-status-filter" className="sr-only">Filter by delivery status</label>
             <select
+              id="deliveries-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter by delivery status"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <option value="ALL">All Delivery Statuses</option>
               <option value="ASSIGNED">Assigned</option>
@@ -122,7 +144,7 @@ export const PharmacyDeliveriesPage: React.FC = () => {
       </div>
 
       {/* Table: Order, Customer, Delivery Staff, Branch, Status, Time */}
-      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -200,7 +222,7 @@ export const PharmacyDeliveriesPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleUpdateStatus(d.id, 'DELIVERED')}
-                        className="px-2.5 py-1 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-2xs"
+                        className="px-2.5 py-1 rounded bg-pine-700 hover:bg-pine-800 text-white font-semibold text-xs transition-colors shadow-sm"
                       >
                         Mark Delivered
                       </button>

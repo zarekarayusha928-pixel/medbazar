@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Eye, CheckCircle2, Clock, X, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { MOCK_ORDERS, MOCK_BRANCHES } from '@/services/api/mockData';
+import { orderApi } from '@/services/api/orderApi';
 import { Order, OrderStatus } from '@/types';
 
 export const PharmacyOrdersPage: React.FC = () => {
@@ -14,6 +15,17 @@ export const PharmacyOrdersPage: React.FC = () => {
   const [branchFilter, setBranchFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState<string>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    orderApi
+      .getOrders()
+      .then((data) => {
+        if (data && data.length > 0) setOrders(data);
+      })
+      .catch((_err) => {
+        // Fallback
+      });
+  }, []);
 
   // Filter logic
   const filteredOrders = orders.filter((ord) => {
@@ -48,11 +60,16 @@ export const PharmacyOrdersPage: React.FC = () => {
     return true;
   });
 
-  const updateStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    showToast('Order Status Updated', `Order #${orderId} moved to ${newStatus}`, 'success');
-    if (selectedOrder) {
-      setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+  const updateStatus = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await orderApi.updateOrderStatus(orderId, newStatus);
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      showToast('Order Status Updated', `Order #${orderId} moved to ${newStatus}`, 'success');
+      if (selectedOrder) {
+        setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+    } catch (err: any) {
+      showToast('Status Update Failed', err?.message || 'Invalid status transition.', 'error');
     }
   };
 
@@ -98,17 +115,18 @@ export const PharmacyOrdersPage: React.FC = () => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white border border-sand-300 rounded-md p-3 space-y-2.5 shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md p-3 space-y-2.5 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
           {/* Search */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" aria-hidden="true" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by ID, customer, item..."
-              className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700"
+              aria-label="Search orders by ID, customer, or medicine"
+              className="w-full pl-9 pr-3 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-900 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-pine-600"
             />
           </div>
 
@@ -117,7 +135,8 @@ export const PharmacyOrdersPage: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter orders by fulfillment status"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-pine-600"
             >
               <option value="ALL">All Statuses</option>
               <option value="PENDING">Pending</option>
@@ -136,7 +155,8 @@ export const PharmacyOrdersPage: React.FC = () => {
             <select
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter orders by pharmacy branch"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-pine-600"
             >
               <option value="ALL">All Branches</option>
               {MOCK_BRANCHES.map(b => (
@@ -152,7 +172,8 @@ export const PharmacyOrdersPage: React.FC = () => {
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700"
+              aria-label="Filter orders by creation date"
+              className="w-full px-2.5 py-1.5 rounded border border-sand-300 text-xs bg-white text-gray-800 focus:outline-none focus:border-pine-700 focus-visible:ring-2 focus-visible:ring-pine-600"
             >
               <option value="ALL">All Dates</option>
               <option value="TODAY">Today Only</option>
@@ -162,7 +183,7 @@ export const PharmacyOrdersPage: React.FC = () => {
       </div>
 
       {/* Orders Table - Compact, Hairline Borders, Mono Numerals */}
-      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-2xs">
+      <div className="bg-white border border-sand-300 rounded-md overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -324,7 +345,7 @@ export const PharmacyOrdersPage: React.FC = () => {
                     onClick={() => updateStatus(selectedOrder.id, st)}
                     className={`py-1.5 px-2 rounded text-[11px] font-semibold border transition-colors ${
                       selectedOrder.status === st
-                        ? 'bg-pine-700 text-white border-pine-700 shadow-2xs'
+                        ? 'bg-pine-700 text-white border-pine-700 shadow-sm'
                         : 'bg-white hover:bg-sand-100 text-gray-700 border-sand-300'
                     }`}
                   >

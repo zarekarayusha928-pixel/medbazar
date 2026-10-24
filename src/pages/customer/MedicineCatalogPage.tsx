@@ -29,6 +29,7 @@ export const MedicineCatalogPage: React.FC = () => {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Sync category or query when URL params change
   useEffect(() => {
@@ -42,6 +43,7 @@ export const MedicineCatalogPage: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     Promise.all([
       medicineService.searchMedicines(query, selectedCategory),
       medicineService.getCategories()
@@ -80,6 +82,9 @@ export const MedicineCatalogPage: React.FC = () => {
 
       setMedicines(filtered);
       setCategories(cats);
+      setLoading(false);
+    }).catch(() => {
+      setError('Unable to load medications from dispensary network. Please try again.');
       setLoading(false);
     });
   }, [query, selectedCategory, rxFilter, stockOnly, sortBy, activeBranchId]);
@@ -125,18 +130,21 @@ export const MedicineCatalogPage: React.FC = () => {
         </div>
 
         {/* Selected Branch Indicator */}
-        <div className="flex items-center gap-2 bg-white px-3.5 py-2 rounded-xl border border-sand-300 text-xs font-mono">
-          <MapPin className="w-4 h-4 text-pine-700 shrink-0" />
+        <div className="flex items-center gap-2 bg-white px-3.5 py-2 rounded-lg border border-sand-300 text-xs font-mono">
+          <MapPin className="w-4 h-4 text-pine-700 shrink-0" aria-hidden="true" />
           <div>
             <span className="text-[10px] text-gray-400 block uppercase">Fulfillment Branch:</span>
+            <label htmlFor="catalog-branch-select" className="sr-only">Select fulfillment branch</label>
             <select
+              id="catalog-branch-select"
               value={activeBranchId}
+              aria-label="Select fulfillment branch"
               onChange={(e) => {
                 setActiveBranchId(e.target.value);
                 const b = MOCK_BRANCHES.find(br => br.id === e.target.value);
                 if (b) setSelectedBranch(b);
               }}
-              className="font-semibold text-gray-800 bg-transparent focus:outline-none cursor-pointer"
+              className="font-semibold text-gray-800 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 cursor-pointer"
             >
               {MOCK_BRANCHES.map(b => (
                 <option key={b.id} value={b.id}>
@@ -152,8 +160,10 @@ export const MedicineCatalogPage: React.FC = () => {
       <div className="space-y-4">
         {/* Search Input Bar */}
         <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" aria-hidden="true" />
+          <label htmlFor="catalog-medicine-search" className="sr-only">Search medicines</label>
           <input
+            id="catalog-medicine-search"
             type="text"
             value={query}
             onChange={(e) => {
@@ -167,7 +177,8 @@ export const MedicineCatalogPage: React.FC = () => {
               });
             }}
             placeholder="Search by brand name, generic composition, or salt (e.g. Paracetamol, Metformin, Dolo)..."
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-sand-300 bg-white text-xs sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-pine-600 focus:ring-1 focus:ring-pine-600 font-sans shadow-xs"
+            aria-label="Search by brand name, generic composition, or salt"
+            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-lg border border-sand-300 bg-white text-xs sm:text-sm text-gray-900 placeholder-gray-400 hover:border-sand-400 focus:outline-none focus:border-pine-600 focus-visible:ring-2 focus-visible:ring-brand-500 font-sans shadow-sm"
           />
         </div>
 
@@ -177,8 +188,8 @@ export const MedicineCatalogPage: React.FC = () => {
             onClick={() => handleCategoryClick('')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors duration-150 ${
               selectedCategory === ''
-                ? 'bg-pine-700 text-white font-semibold shadow-xs'
-                : 'bg-white border border-sand-300 text-gray-700 hover:border-gray-400'
+                ? 'bg-pine-700 text-white font-semibold shadow-sm'
+                : 'bg-white border border-sand-300 text-gray-700 hover:border-sand-400 hover:bg-sand-50'
             }`}
           >
             All Categories
@@ -189,8 +200,8 @@ export const MedicineCatalogPage: React.FC = () => {
               onClick={() => handleCategoryClick(c.id)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors duration-150 ${
                 selectedCategory === c.id
-                  ? 'bg-pine-700 text-white font-semibold shadow-xs'
-                  : 'bg-white border border-sand-300 text-gray-700 hover:border-gray-400'
+                  ? 'bg-pine-700 text-white font-semibold shadow-sm'
+                  : 'bg-white border border-sand-300 text-gray-700 hover:border-sand-400 hover:bg-sand-50'
               }`}
             >
               {c.name}
@@ -199,7 +210,7 @@ export const MedicineCatalogPage: React.FC = () => {
         </div>
 
         {/* Refined Filters Row */}
-        <div className="bg-sand-100 p-3 sm:p-4 rounded-2xl border border-sand-300 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="bg-sand-100 p-3 sm:p-4 rounded-lg border border-sand-300 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex flex-wrap items-center gap-4">
             {/* Rx Filter Toggle */}
             <div className="flex items-center gap-1.5 font-sans">
@@ -252,10 +263,13 @@ export const MedicineCatalogPage: React.FC = () => {
             <span className="font-mono text-[11px] text-gray-500">
               {medicines.length} {medicines.length === 1 ? 'medicine' : 'medicines'} found
             </span>
+            <label htmlFor="catalog-sort-select" className="sr-only">Sort medicines</label>
             <select
+              id="catalog-sort-select"
               value={sortBy}
+              aria-label="Sort medicines"
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-2.5 py-1.5 rounded-lg border border-sand-300 bg-white text-xs font-sans text-gray-800 focus:outline-none"
+              className="px-2.5 py-1.5 rounded-lg border border-sand-300 bg-white text-xs font-sans text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <option value="featured">Sort: Recommended</option>
               <option value="price_asc">Price: Low to High</option>
@@ -269,6 +283,16 @@ export const MedicineCatalogPage: React.FC = () => {
       {/* Medicine Cards Grid */}
       {loading ? (
         <LoadingState message="Accessing verified pharmacy inventory..." />
+      ) : error ? (
+        <EmptyState
+          icon={<AlertCircle className="w-8 h-8 text-red-600" />}
+          title="Failed to load catalogue"
+          description={error}
+          actionLabel="Retry"
+          onAction={() => {
+            setQuery(query);
+          }}
+        />
       ) : medicines.length === 0 ? (
         <EmptyState
           icon={<Pill className="w-8 h-8 text-pine-700" />}
@@ -284,7 +308,7 @@ export const MedicineCatalogPage: React.FC = () => {
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {medicines.map((med) => {
             const inventory = MOCK_INVENTORY.find(
               (i) => i.medicineId === med.id && i.branchId === activeBranchId
@@ -296,7 +320,7 @@ export const MedicineCatalogPage: React.FC = () => {
             return (
               <div
                 key={med.id}
-                className="bg-white rounded-2xl border border-sand-300 hover:border-gray-300 p-5 flex flex-col justify-between transition-all duration-150 hover:shadow-2xs group"
+                className="bg-white rounded-lg border border-sand-300 hover:border-sand-400 p-4 sm:p-5 flex flex-col justify-between transition-all duration-150 hover:shadow-sm group"
               >
                 <div className="space-y-3.5">
                   {/* Top Badges */}
@@ -333,8 +357,9 @@ export const MedicineCatalogPage: React.FC = () => {
 
                   {/* Branch & Availability Information */}
                   <div className="pt-2 border-t border-sand-200 flex items-center justify-between text-[11px] font-mono">
-                    <span className="text-gray-600 truncate max-w-[160px]" title={currentBranchObj.name}>
-                      📍 {currentBranchObj.name.split('-')[1] || currentBranchObj.name}
+                    <span className="text-gray-600 truncate max-w-[160px] inline-flex items-center gap-1" title={currentBranchObj.name}>
+                      <MapPin className="w-3 h-3 text-pine-700 shrink-0" />
+                      <span>{currentBranchObj.name.split('-')[1] || currentBranchObj.name}</span>
                     </span>
                     <span className={inStock ? 'text-emerald-700 font-semibold' : 'text-red-600 font-semibold'}>
                       {inStock ? `In Stock (${inventory?.quantity} units)` : 'Out of Stock'}
@@ -356,17 +381,18 @@ export const MedicineCatalogPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/customer/medicines/${med.id}`}
-                      className="text-xs font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                      className="text-xs font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-sand-300 hover:bg-sand-50 transition-colors"
                     >
                       Details
                     </Link>
                     <button
                       onClick={() => handleAddToCart(med, price)}
                       disabled={!inStock}
-                      className="bg-pine-700 hover:bg-pine-800 disabled:bg-gray-200 disabled:text-gray-400 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                      aria-label={`Add ${med.name} to cart`}
+                      className="bg-pine-700 hover:bg-pine-800 disabled:bg-sand-200 disabled:text-gray-400 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                       title="Add to cart"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>Add</span>
                     </button>
                   </div>

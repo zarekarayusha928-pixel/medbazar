@@ -29,7 +29,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         placeholder={placeholder}
         className={twMerge(
           clsx(
-            'w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 text-sm bg-white text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-500',
+            'w-full pl-10 pr-9 py-2 rounded-lg border border-sand-300 text-sm bg-white text-gray-900 placeholder-gray-400 hover:border-sand-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-500',
             className
           )
         )}
@@ -42,9 +42,10 @@ export const SearchInput: React.FC<SearchInputProps> = ({
             onChange('');
             if (onClear) onClear();
           }}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+          aria-label="Clear search input"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
     </div>
